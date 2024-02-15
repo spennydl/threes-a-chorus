@@ -62,7 +62,16 @@ void Udp_initializeUdpServer()
     udp_sin.sin_port = htons(PORT);
 
     socketDescriptor = socket(PF_INET, SOCK_DGRAM, 0);
-    bind(socketDescriptor, (struct sockaddr*)&udp_sin, sizeof(udp_sin));
+
+    if(socketDescriptor == -1) 
+    {
+        printf("Error creating UDP socket during initialization!\n");
+    }
+
+    if(bind(socketDescriptor, (struct sockaddr*)&udp_sin, sizeof(udp_sin)) == -1)
+    {
+        printf("Error binding to socket during UDP server initialization!\n");
+    }
 
     pthread_create(&udpServerThreadId, NULL, udpServerWorker, NULL);
 }
@@ -80,7 +89,13 @@ void Udp_cleanUpUdpServer()
 void Udp_sendUdpServerResponse(const char* message, struct sockaddr_in sinRemote)
 {
     unsigned int sin_len = sizeof(sinRemote);
-    sendto(socketDescriptor, message, strlen(message), 0, (struct sockaddr*)&sinRemote, sin_len);
+    
+    if(sendto(socketDescriptor, message, strlen(message), 0, (struct sockaddr*)&sinRemote, sin_len) == -1)
+    {
+        char address[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &sinRemote.sin_addr, address, sizeof(address));
+        printf("Error sending message '%s' to %s\n", message, address);
+    }
 }
 
 void Udp_attachToUdpServer(const UdpObserver* observer)
@@ -121,6 +136,13 @@ void* udpServerWorker(void* p)
 
         int bytesRx = recvfrom(socketDescriptor, messageRx, MAX_LEN - 1,
         0, (struct sockaddr*)&sinRemote, &sin_len);
+
+        if(bytesRx < 0)
+        {
+            char address[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &sinRemote.sin_addr, address, sizeof(address));
+            printf("UDP server could not read message from %s\n", address);
+        }
 
         // Make sure string null terminates
         messageRx[bytesRx] = 0;
