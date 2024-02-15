@@ -136,6 +136,7 @@ void* udpServerWorker(void* p)
             char address[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &sinRemote.sin_addr, address, sizeof(address));
             printf("UDP server could not read message from %s\n", address);
+            continue;
         }
 
         // Make sure string null terminates
