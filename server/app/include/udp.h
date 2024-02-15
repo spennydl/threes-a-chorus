@@ -22,7 +22,7 @@ void Udp_initializeUdpServer();
 void Udp_cleanUpUdpServer();
 
 // Nice and easy util method for sending back responses!
-void Udp_sendUdpServerResponse(const char* message, struct sockaddr_in sinRemote);
+ssize_t Udp_sendUdpServerResponse(const char* message, struct sockaddr_in sinRemote);
 
 // Add a new observer
 void Udp_attachToUdpServer(const UdpObserver* observer);

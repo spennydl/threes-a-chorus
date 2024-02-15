@@ -86,16 +86,10 @@ void Udp_cleanUpUdpServer()
     freeObservers();
 }
 
-void Udp_sendUdpServerResponse(const char* message, struct sockaddr_in sinRemote)
+ssize_t Udp_sendUdpServerResponse(const char* message, struct sockaddr_in sinRemote)
 {
     unsigned int sin_len = sizeof(sinRemote);
-    
-    if(sendto(socketDescriptor, message, strlen(message), 0, (struct sockaddr*)&sinRemote, sin_len) == -1)
-    {
-        char address[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &sinRemote.sin_addr, address, sizeof(address));
-        printf("Error sending message '%s' to %s\n", message, address);
-    }
+    return sendto(socketDescriptor, message, strlen(message), 0, (struct sockaddr*)&sinRemote, sin_len);
 }
 
 void Udp_attachToUdpServer(const UdpObserver* observer)
