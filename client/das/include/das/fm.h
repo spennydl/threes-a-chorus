@@ -108,9 +108,9 @@ Fm_setOperatorCM(FmSynthesizer* synth,
                  unsigned char M);
 
 void
-Fm_triggerNote(FmSynthesizer* synth);
+Fm_noteOff(FmSynthesizer* synth);
 void
-Fm_gateNote(FmSynthesizer* synth);
+Fm_noteOn(FmSynthesizer* synth);
 
 /// Get the frequency of an operator.
 double

@@ -1,4 +1,5 @@
 #include "das/fm.h"
+#include "das/envelope.h"
 
 #include <malloc.h>
 #include <math.h>
@@ -9,140 +10,7 @@
 #define TWELVETH_ROOT_OF_TWO 1.059463094359
 #define SAMPLE_RATE 44100
 
-typedef enum
-{
-    ATTACK,
-    DECAY,
-    SUSTAIN,
-    RELEASE,
-    ADSR_OFF
-} AdsrState;
-
-typedef struct
-{
-    size_t attackMs;
-    size_t decayMs;
-    size_t releaseMs;
-    double sustainLevel;
-    double attackPeak;
-
-    AdsrState state;
-    double step;
-    double envelope;
-} Adsr;
-
-static void
-adsrInit(Adsr* adsr)
-{
-    adsr->state = ADSR_OFF;
-    adsr->step = 0.0;
-    adsr->envelope = 0.0;
-}
-
-static void
-adsrTransitionAttack(Adsr* adsr, size_t sampleRate)
-{
-    // depending on the state and time, we need a linear step that will
-    // get us to the target level in the target time.
-    adsr->envelope = 0.0;
-    double samplesToTarget = sampleRate * (adsr->attackMs / 1000.0);
-    // TODO: precision is gonna be awful here.
-    adsr->step = adsr->attackPeak / samplesToTarget;
-    adsr->state = ATTACK;
-}
-
-static void
-adsrTransitionDecay(Adsr* adsr, size_t sampleRate)
-{
-    // we're assuming we're at the attack peak here
-    double samplesToTarget = sampleRate * (adsr->decayMs / 1000.0);
-    // TODO: precision is gonna be awful here.
-    // Note that this could decay "upwards" if we start below sustain
-    adsr->step = -1 * (adsr->attackPeak - adsr->sustainLevel) / samplesToTarget;
-    adsr->state = DECAY;
-}
-
-static void
-adsrTransitionSustain(Adsr* adsr)
-{
-    adsr->step = 0.0;
-    adsr->envelope = adsr->sustainLevel;
-    adsr->state = SUSTAIN;
-}
-
-static void
-adsrTransitionOff(Adsr* adsr)
-{
-    adsr->step = 0.0;
-    adsr->envelope = 0.0;
-    adsr->state = ADSR_OFF;
-}
-
-static void
-adsrTransitionRelease(Adsr* adsr, size_t sampleRate)
-{
-    // depending on the state and time, we need a linear step that will
-    // get us to the target level in the target time.
-    double samplesToTarget = sampleRate * (adsr->releaseMs / 1000.0);
-    // TODO: precision is gonna be awful here.
-    adsr->step = -1 * adsr->envelope / samplesToTarget;
-    adsr->state = RELEASE;
-}
-
-static void
-adsrTransitionIfNeeded(Adsr* adsr, size_t sampleRate)
-{
-    switch (adsr->state) {
-        case ATTACK: {
-            if (adsr->envelope >= adsr->attackPeak) {
-                fprintf(stderr, "TRANSITION ATTACK %f\n", adsr->envelope);
-                adsrTransitionDecay(adsr, sampleRate);
-            }
-            break;
-        }
-        case DECAY: {
-            if (adsr->envelope <= adsr->sustainLevel) { // TODO: assumption!
-                fprintf(stderr, "TRANSITION DECAY %f\n", adsr->envelope);
-                adsrTransitionSustain(adsr);
-            }
-            break;
-        }
-        case RELEASE: {
-            if (adsr->envelope <= 0) {
-                fprintf(stderr, "TRANSITION RELEASE %f\n", adsr->envelope);
-                adsrTransitionOff(adsr);
-            }
-            break;
-        }
-        default: {
-            // Transitions to attack and sustain must be manually triggered
-            break;
-        }
-    }
-}
-
-// static void
-// adsrGate(Adsr* adsr, size_t sampleRate)
-//{
-// if (adsr->state == SUSTAIN) {
-// adsrTransitionRelease(adsr, sampleRate);
-//} else {
-// adsrTransitionAttack(adsr, sampleRate);
-//}
-//}
-//
-static double
-adsrUpdate(Adsr* adsr, size_t sampleRate)
-{
-    double ret = 0.0;
-    if (adsr->state != ADSR_OFF) {
-        ret = adsr->envelope;
-        adsr->envelope += adsr->step;
-        adsrTransitionIfNeeded(adsr, sampleRate);
-    }
-
-    return ret;
-}
+#define ADSR_UPDATES_PER_SEC 64
 
 typedef struct
 {
@@ -153,7 +21,7 @@ typedef struct
     size_t decayMs;
     size_t releaseMs;
 
-    Adsr adsr;
+    AdsrEnvelope adsr;
 
     double envelope;
     double carrierFreq;
@@ -169,22 +37,22 @@ typedef struct
     WaveType opWave[FM_OPERATORS];
     double opModBy[FM_OPERATORS * FM_OPERATORS];
 
-    Adsr opAdsr[FM_OPERATORS];
-} FmSynth;
+    AdsrEnvelope opAdsr[FM_OPERATORS];
+} _FmSynth;
 
 inline static double
 calcStep(double freq, size_t sampleRate);
 static void
 configure(FmSynthesizer* synth, const FmSynthParams* params);
-static FmSynth*
+static _FmSynth*
 fmSynthAlloc(void);
 
-static FmSynth*
+static _FmSynth*
 fmSynthAlloc(void)
 {
-    FmSynth* synth = malloc(sizeof(FmSynth));
+    _FmSynth* synth = malloc(sizeof(_FmSynth));
     if (synth) {
-        memset(synth, 0, sizeof(FmSynth));
+        memset(synth, 0, sizeof(_FmSynth));
     }
     return synth;
 }
@@ -199,7 +67,7 @@ calcStep(double freq, size_t sample_rate)
 static void
 configure(FmSynthesizer* syn, const FmSynthParams* params)
 {
-    FmSynth* synth = syn->__FmSynth;
+    _FmSynth* synth = syn->__FmSynth;
     if (NULL != synth) {
         Fm_setNote(syn, params->note);
         synth->sampleRate = params->sampleRate;
@@ -207,12 +75,12 @@ configure(FmSynthesizer* syn, const FmSynthParams* params)
         synth->envelope = 0.0;
         synth->carrierWave = params->carrierWaveType;
 
-        adsrInit(&synth->adsr);
         synth->adsr.attackMs = 300;
         synth->adsr.decayMs = 150;
-        synth->adsr.releaseMs = 100;
-        synth->adsr.attackPeak = 1.0;
+        synth->adsr.releaseMs = 300;
+        synth->adsr.attackPeak = 0.75;
         synth->adsr.sustainLevel = 0.55;
+        Env_adsrInit(&synth->adsr, ADSR_UPDATES_PER_SEC, synth->sampleRate);
 
         for (int op = 0; op < FM_OPERATORS; op++) {
             const OperatorParams* opParams = &params->opParams[op];
@@ -221,7 +89,15 @@ configure(FmSynthesizer* syn, const FmSynthParams* params)
 
             Fm_setOperatorCM(syn, op, opParams->C, opParams->M);
             // TODO: create a default adsr
-            synth->opEnvelope[op] = 0.75; // TODO: Envelopes.
+            synth->opEnvelope[op] = 0.00; // TODO: Envelopes.
+
+            synth->opAdsr[op].attackMs = 500;
+            synth->opAdsr[op].decayMs = 100;
+            synth->opAdsr[op].releaseMs = 500;
+            synth->opAdsr[op].attackPeak = 1.0;
+            synth->opAdsr[op].sustainLevel = 0.85;
+            Env_adsrInit(
+              &synth->opAdsr[op], ADSR_UPDATES_PER_SEC, synth->sampleRate);
         }
     }
 }
@@ -229,7 +105,7 @@ configure(FmSynthesizer* syn, const FmSynthParams* params)
 FmSynthesizer*
 fm_defaultSynthesizer(void)
 {
-    FmSynth* synth = fmSynthAlloc();
+    _FmSynth* synth = fmSynthAlloc();
     if (!synth) {
         return NULL;
     }
@@ -248,7 +124,7 @@ fm_defaultSynthesizer(void)
 FmSynthesizer*
 Fm_createFmSynthesizer(const FmSynthParams* params)
 {
-    FmSynth* synth = fmSynthAlloc();
+    _FmSynth* synth = fmSynthAlloc();
     if (!synth) {
         return NULL;
     }
@@ -289,7 +165,7 @@ Fm_connectOperators(FmSynthesizer* s, FmOperator from, FmOperator to)
 void
 Fm_setNote(FmSynthesizer* s, Note note)
 {
-    FmSynth* synth = s->__FmSynth;
+    _FmSynth* synth = s->__FmSynth;
     // Frequency of a note relative to a reference frequency is given by:
     //
     // $$ F * 2^{N / 12} $$
@@ -318,7 +194,7 @@ Fm_setOperatorCM(FmSynthesizer* s,
                  unsigned char C,
                  unsigned char M)
 {
-    FmSynth* synth = s->__FmSynth;
+    _FmSynth* synth = s->__FmSynth;
     double ratio = (double)C / (double)M;
     synth->opCM[operator] = ratio;
     double op_freq = synth->carrierFreq * ratio;
@@ -326,24 +202,30 @@ Fm_setOperatorCM(FmSynthesizer* s,
 }
 
 void
-Fm_triggerNote(FmSynthesizer* s)
+Fm_noteOn(FmSynthesizer* s)
 {
-    FmSynth* synth = s->__FmSynth;
-    adsrTransitionAttack(&synth->adsr, synth->sampleRate);
+    _FmSynth* synth = s->__FmSynth;
+    Env_adsrTrigger(&synth->adsr);
+    for (int op = 0; op < FM_OPERATORS; op++) {
+        Env_adsrTrigger(&synth->opAdsr[op]);
+    }
 }
 
 void
-Fm_gateNote(FmSynthesizer* s)
+Fm_noteOff(FmSynthesizer* s)
 {
-    FmSynth* synth = s->__FmSynth;
-    adsrTransitionRelease(&synth->adsr, synth->sampleRate);
+    _FmSynth* synth = s->__FmSynth;
+    Env_adsrGate(&synth->adsr);
+    for (int op = 0; op < FM_OPERATORS; op++) {
+        Env_adsrGate(&synth->opAdsr[op]);
+    }
 }
 
 /// Explicitly set the frequency of an oeprator.
 void
 Fm_setOpFrequency(FmSynthesizer* s, FmOperator op, double freq)
 {
-    FmSynth* synth = s->__FmSynth;
+    _FmSynth* synth = s->__FmSynth;
     // TODO
     // synth->op_freq[op] = freq;
     synth->opStep[op] = calcStep(freq, synth->sampleRate);
@@ -352,7 +234,7 @@ Fm_setOpFrequency(FmSynthesizer* s, FmOperator op, double freq)
 void
 Fm_setOpStrength(FmSynthesizer* s, FmOperator op, double strength)
 {
-    FmSynth* synth = s->__FmSynth;
+    _FmSynth* synth = s->__FmSynth;
     synth->opStrength[op] = strength;
 }
 
@@ -369,9 +251,9 @@ cycle2Pi(double value)
 void
 Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
 {
-    FmSynth* synth = s->__FmSynth;
+    _FmSynth* synth = s->__FmSynth;
 
-    // 1. Compute operator envelopes.
+    // 1. Compute operator envelopes. (do at end now)
     // 2. Sample the operators, mult with envelopes. Save these.
     // 3. Update: New modulated angles for all the operators.
     // 4. Compute the overall note envelope.
@@ -384,13 +266,7 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
     // - sample
     // - update (modulate and step)
 
-    // for now, env will just be the sustain value.
-
     for (size_t s = 0; s < nSamples; s++) {
-        // 1.
-        // for (int i = 0; i < FM_OPERATORS; i++) {
-        //    TODO Envelopes.
-        //}
         double opSamples[FM_OPERATORS];
         double angle = 0.0;
         // 2.
@@ -408,20 +284,26 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
             synth->opAngle[op] = cycle2Pi(synth->opAngle[op]);
         }
 
-        // 4.
-        // But not every frame!
-        adsrUpdate(&synth->adsr, synth->sampleRate);
-        synth->envelope = synth->adsr.envelope;
-        //  for (int op = 0; op < FM_OPERATORS; op++) {
-        //  adsrUpdate(&synth->opAdsr[op], synth->sampleRate);
-        //  synth->opEnvelope[op] = synth->opAdsr[op].envelope;
-        // }
+        // synth->envelope = synth->adsr.envelope;
+        //   for (int op = 0; op < FM_OPERATORS; op++) {
+        //   adsrUpdate(&synth->opAdsr[op], synth->sampleRate);
+        //   synth->opEnvelope[op] = synth->opAdsr[op].envelope;
+        //  }
 
         // 5.
         double carrierSample =
           WaveTable_sample(synth->carrierWave, synth->carrierAngle);
         int16_t sampleVal = round(carrierSample * synth->envelope * INT16_MAX);
         sampleBuf[s] = sampleVal;
+
+        // 4.
+        // But not every frame!
+        if (s % ADSR_UPDATES_PER_SEC == 0) {
+            synth->envelope = Env_adsrUpdate(&synth->adsr);
+            for (int op = 0; op < FM_OPERATORS; op++) {
+                synth->opEnvelope[op] = Env_adsrUpdate(&synth->opAdsr[op]);
+            }
+        }
 
         // 6.
         synth->carrierAngle +=
