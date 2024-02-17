@@ -10,7 +10,7 @@
 #define TWELVETH_ROOT_OF_TWO 1.059463094359
 #define SAMPLE_RATE 44100
 
-#define ADSR_UPDATES_PER_SEC 64
+#define ADSR_UPDATES_PER_SEC 32
 
 typedef struct
 {
@@ -103,7 +103,7 @@ configure(FmSynthesizer* syn, const FmSynthParams* params)
 }
 
 FmSynthesizer*
-fm_defaultSynthesizer(void)
+Fm_defaultSynthesizer(void)
 {
     _FmSynth* synth = fmSynthAlloc();
     if (!synth) {
@@ -153,12 +153,14 @@ Fm_destroySynthesizer(FmSynthesizer* synth)
 
 /// Connect an operator to another
 void
-Fm_connectOperators(FmSynthesizer* s, FmOperator from, FmOperator to)
+Fm_connectOperators(FmSynthesizer* s,
+                    FmOperator from,
+                    FmOperator to,
+                    double strength)
 {
-    // TODO implement
-    (void)s;
-    (void)from;
-    (void)to;
+    _FmSynth* synth = s->__FmSynth;
+    size_t idx = (to * FM_OPERATORS) + from;
+    synth->opModBy[idx] = strength;
 }
 
 /// Set the carrier note
@@ -241,6 +243,9 @@ Fm_setOpStrength(FmSynthesizer* s, FmOperator op, double strength)
 inline static double
 cycle2Pi(double value)
 {
+    while (value < 0) {
+        value += PI2;
+    }
     if (value > PI2) {
         value = fmod(value, PI2);
     }
@@ -279,16 +284,15 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
 
         // 3.
         for (int op = 0; op < FM_OPERATORS; op++) {
-            // TODO: Connect them together.
-            synth->opAngle[op] += synth->opStep[op];
+            int idx = op * FM_OPERATORS;
+            double opMod = 0;
+            for (int modOp = 0; modOp < FM_OPERATORS; modOp++) {
+                opMod += synth->opModBy[idx + modOp] * opSamples[modOp];
+            }
+            synth->opAngle[op] +=
+              synth->opStep[op] + (synth->opStep[op] * opMod);
             synth->opAngle[op] = cycle2Pi(synth->opAngle[op]);
         }
-
-        // synth->envelope = synth->adsr.envelope;
-        //   for (int op = 0; op < FM_OPERATORS; op++) {
-        //   adsrUpdate(&synth->opAdsr[op], synth->sampleRate);
-        //   synth->opEnvelope[op] = synth->opAdsr[op].envelope;
-        //  }
 
         // 5.
         double carrierSample =
@@ -297,7 +301,6 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
         sampleBuf[s] = sampleVal;
 
         // 4.
-        // But not every frame!
         if (s % ADSR_UPDATES_PER_SEC == 0) {
             synth->envelope = Env_adsrUpdate(&synth->adsr);
             for (int op = 0; op < FM_OPERATORS; op++) {

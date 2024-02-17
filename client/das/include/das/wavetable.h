@@ -12,7 +12,8 @@ typedef enum
     WAVETYPE_SINE,
     WAVETYPE_SQUARE,
     WAVETYPE_SAW,
-    WAVETYPE_TRIANGLE
+    // TODO: maybe?
+    // WAVETYPE_TRIANGLE
 } WaveType;
 
 // This is the new approach.

@@ -90,7 +90,10 @@ Fm_destroySynthesizer(FmSynthesizer* synth);
 
 /// Connect an operator to another
 void
-Fm_connectOperators(FmSynthesizer* synth, FmOperator from, FmOperator to);
+Fm_connectOperators(FmSynthesizer* synth,
+                    FmOperator from,
+                    FmOperator to,
+                    double strength);
 
 /// Set the carrier note
 void
