@@ -1,3 +1,10 @@
+/**
+ * @file udp.c
+ * @brief Implementation For for server stuff
+ * Code in this section adapted from the slides
+ * Observer pattern implementation adapted from adamtornhill.com
+*/
+
 #include <stdbool.h>
 #include <sys/socket.h>
 #include <stdio.h>
@@ -26,22 +33,22 @@ static int socketDescriptor;
 pthread_t udpServerThreadId;
 static atomic_bool udpServerRunning = true;
 
-static void sendMessageToObservers(char* message, struct sockaddr_in sinRemote)
+static void
+sendMessageToObservers(char* message, struct sockaddr_in sinRemote)
 {
     struct ListNode* node = head;
 
-    while(node != NULL)
-    {
+    while(node != NULL) {
         UdpObserver* observer = &node->item;
         observer->notification(observer->instance, message, sinRemote);
         node = node->next;
     }
 }
 
-static void freeObserver(struct ListNode* observer)
+static void
+freeObserver(struct ListNode* observer)
 {
-    if (observer == NULL)
-    {
+    if (observer == NULL) {
         return;
     }
 
@@ -49,12 +56,14 @@ static void freeObserver(struct ListNode* observer)
     free(observer);
 }
 
-static void freeObservers()
+static void
+freeObservers()
 {
     freeObserver(head);
 }
 
-void Udp_initializeUdpServer()
+void
+Udp_initializeUdpServer()
 {
     memset(&udp_sin, 0, sizeof(udp_sin));
     udp_sin.sin_family = AF_INET;
@@ -63,20 +72,19 @@ void Udp_initializeUdpServer()
 
     socketDescriptor = socket(PF_INET, SOCK_DGRAM, 0);
 
-    if(socketDescriptor == -1) 
-    {
+    if(socketDescriptor == -1) {
         printf("Error creating UDP socket during initialization!\n");
     }
 
-    if(bind(socketDescriptor, (struct sockaddr*)&udp_sin, sizeof(udp_sin)) == -1)
-    {
+    if(bind(socketDescriptor, (struct sockaddr*)&udp_sin, sizeof(udp_sin)) == -1) {
         printf("Error binding to socket during UDP server initialization!\n");
     }
 
     pthread_create(&udpServerThreadId, NULL, udpServerWorker, NULL);
 }
 
-void Udp_cleanUpUdpServer()
+void
+Udp_cleanUpUdpServer()
 {
     udpServerRunning = false;
     
@@ -86,18 +94,19 @@ void Udp_cleanUpUdpServer()
     freeObservers();
 }
 
-ssize_t Udp_sendUdpServerResponse(const char* message, struct sockaddr_in sinRemote)
+ssize_t
+Udp_sendUdpServerResponse(const char* message, struct sockaddr_in sinRemote)
 {
     unsigned int sin_len = sizeof(sinRemote);
     return sendto(socketDescriptor, message, strlen(message), 0, (struct sockaddr*)&sinRemote, sin_len);
 }
 
-void Udp_attachToUdpServer(const UdpObserver* observer)
+void
+Udp_attachToUdpServer(const UdpObserver* observer)
 {
     assert(observer != NULL);
 
-    if (head == NULL)
-    {
+    if (head == NULL) {
         struct ListNode* newNode = (struct ListNode*)malloc(sizeof(struct ListNode));
         newNode->item = *observer;
         newNode->next = NULL;
@@ -107,8 +116,7 @@ void Udp_attachToUdpServer(const UdpObserver* observer)
 
     struct ListNode* node = head;
 
-    while (node->next != NULL)
-    {
+    while (node->next != NULL) {
         node = node->next;
     }
 
@@ -118,12 +126,12 @@ void Udp_attachToUdpServer(const UdpObserver* observer)
     node->next = newNode;
 }
 
-void* udpServerWorker(void* p)
+void*
+udpServerWorker(void* p)
 {
     (void)p;
 
-    while(udpServerRunning)
-    {
+    while(udpServerRunning) {
         struct sockaddr_in sinRemote;
         unsigned int sin_len = sizeof(sinRemote);
         char messageRx[MAX_LEN];
@@ -131,8 +139,7 @@ void* udpServerWorker(void* p)
         int bytesRx = recvfrom(socketDescriptor, messageRx, MAX_LEN - 1,
         0, (struct sockaddr*)&sinRemote, &sin_len);
 
-        if(bytesRx < 0)
-        {
+        if(bytesRx < 0) {
             char address[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &sinRemote.sin_addr, address, sizeof(address));
             printf("UDP server could not read message from %s\n", address);
