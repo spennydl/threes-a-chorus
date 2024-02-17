@@ -1,5 +1,4 @@
-#ifndef TAC_DAS_FM_H
-#define TAC_DAS_FM_H
+#pragma once
 
 #include "das/wavetable.h"
 #include <stddef.h>
@@ -22,7 +21,7 @@ typedef enum
     G4,
     Ab4,
     A5
-} note;
+} Note;
 
 typedef enum
 {
@@ -31,91 +30,99 @@ typedef enum
     FM_OPERATOR2,
     FM_OPERATOR3,
     FM_OPERATORS
-} fm_operator;
-
-typedef struct
-{
-    unsigned char first;
-    unsigned char second;
-} pair_uc;
+} FmOperator;
 
 typedef struct
 {
     double strength;
-    wave_type wave_type;
-    pair_uc CM;
-} operator_params;
+    WaveType waveType;
+    unsigned char C;
+    unsigned char M;
+} OperatorParams;
 
 typedef struct
 {
-    note note;
-    size_t sample_rate;
-    wave_type carrier_wave_type;
-    operator_params op_params[FM_OPERATORS];
-} fm_params;
+    Note note;
+    size_t sampleRate;
+    WaveType carrierWaveType;
+    OperatorParams opParams[FM_OPERATORS];
+} FmSynthParams;
 
-static const fm_params FM_DEFAULT_PARAMS = {
+static const FmSynthParams FM_DEFAULT_PARAMS = {
     .note = A4,
-    .sample_rate = 44100,
-    .carrier_wave_type = WAVETYPE_SINE,
-    .op_params = { { .strength = 0.0,
-                     .wave_type = WAVETYPE_SINE,
-                     .CM = { .first = 1, .second = 2 } },
-                   { .strength = 0.0,
-                     .wave_type = WAVETYPE_SINE,
-                     .CM = { .first = 1, .second = 2 } },
-                   { .strength = 0.0,
-                     .wave_type = WAVETYPE_SINE,
-                     .CM = { .first = 1, .second = 2 } },
-                   { .strength = 0.0,
-                     .wave_type = WAVETYPE_SINE,
-                     .CM = { .first = 1, .second = 2 } } }
-
+    .sampleRate = 44100,
+    .carrierWaveType = WAVETYPE_SINE,
+    .opParams = { { .strength = 0.0,
+                    .waveType = WAVETYPE_SINE,
+                    .C = 1,
+                    .M = 2 },
+                  { .strength = 0.0,
+                    .waveType = WAVETYPE_SINE,
+                    .C = 1,
+                    .M = 2 },
+                  { .strength = 0.0,
+                    .waveType = WAVETYPE_SINE,
+                    .C = 1,
+                    .M = 2 },
+                  { .strength = 0.0,
+                    .waveType = WAVETYPE_SINE,
+                    .C = 1,
+                    .M = 2 } }
 };
 
 /// External-facing type for the fm synth
-typedef void fm;
+typedef struct
+{
+    void* __FmSynth;
+} FmSynthesizer;
 
 /// Create a new FM synth with default parameters.
-fm*
-fm_default(void);
+FmSynthesizer*
+Fm_defaultSynthesizer(void);
 
 /// Create a new FM synth
-fm*
-fm_new(const fm_params* params);
+FmSynthesizer*
+Fm_createFmSynthesizer(const FmSynthParams* params);
 
 /// Destry an FM synth
 void
-fm_destroy(fm** synth);
+Fm_destroySynthesizer(FmSynthesizer* synth);
 
 /// Connect an operator to another
 void
-fm_connect(fm* synth, fm_operator from, fm_operator to);
+Fm_connectOperators(FmSynthesizer* synth, FmOperator from, FmOperator to);
 
 /// Set the carrier note
 void
-fm_set_note(fm* synth, note note);
+Fm_setNote(FmSynthesizer* synth, Note note);
 
 /// Sets the frequency of an operator relative to the frequency of the carrier.
 /// The desired frequency is computed as a ratio between the operator and the
 /// carrier where C is the carrier (numerator) and M is the operator
 /// (denominator)
 void
-fm_set_operator_CM(fm* synth, fm_operator operator, pair_uc CM_ratio);
+Fm_setOperatorCM(FmSynthesizer* synth,
+                 FmOperator
+                 operator,
+                 unsigned char C,
+                 unsigned char M);
+
+void
+Fm_triggerNote(FmSynthesizer* synth);
+void
+Fm_gateNote(FmSynthesizer* synth);
 
 /// Get the frequency of an operator.
 double
-fm_get_operator_freq(fm* synth, fm_operator op);
+Fm_getOpFrequency(FmSynthesizer* synth, FmOperator op);
 
 /// Explicitly set the frequency of an oeprator.
 void
-fm_set_operator_freq(fm* synth, fm_operator op, double freq);
+Fm_setOpFrequency(FmSynthesizer* synth, FmOperator op, double freq);
 
 void
-fm_set_operator_strength(fm* synth, fm_operator op, double strength);
+Fm_setOpStrength(FmSynthesizer* synth, FmOperator op, double strength);
 
 /// Generate n_samples samples in the sample_buf
 void
-fm_generate_samples(fm* synth, int16_t* sample_buf, size_t n_samples);
-
-#endif // TAC_DAS_FM_H
+Fm_generateSamples(FmSynthesizer* synth, int16_t* sampleBuf, size_t nSamples);
