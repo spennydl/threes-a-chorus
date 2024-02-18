@@ -1,6 +1,10 @@
-// For UDP server stuff
-// Code in this section adapted from the slides
-// Observer pattern implementation adapted from adamtornhill.com
+/**
+ * @file udp.h
+ * @brief For UDP server stuff
+ * Code in this section adapted from the slides
+ * Observer pattern implementation adapted from adamtornhill.com
+*/
+
 #pragma once
 
 #define MAX_LEN 1024
@@ -18,16 +22,39 @@ typedef struct
 
 } UdpObserver;
 
-void Udp_initializeUdpServer();
-void Udp_cleanUpUdpServer();
+/**
+ * Initialize UDP server module
+*/
+void
+Udp_initializeUdpServer();
 
-// Nice and easy util method for sending back responses!
-ssize_t Udp_sendUdpServerResponse(const char* message, struct sockaddr_in sinRemote);
+/**
+ * Clean up UDP server module
+*/
+void
+Udp_cleanUpUdpServer();
 
-// Add a new observer
-void Udp_attachToUdpServer(const UdpObserver* observer);
+
+/**
+ * Easy way to send response to a message given:
+ * @param message The message to send
+ * @param sinRemote Address of reciever
+ * @return ssize_t Code of send operation (< 0 means an error!)
+*/
+ssize_t
+Udp_sendUdpServerResponse(const char* message, struct sockaddr_in sinRemote);
+
+/**
+ * Attach and observer to the UDP module
+ * @param observer The observer to add
+*/
+void
+Udp_attachToUdpServer(const UdpObserver* observer);
 
 // TODO: Remove an observer? Not sure if needed really for our usecase
 
-// Worker thread
-void* udpServerWorker(void*);
+/**
+ * Worker thread
+*/
+void*
+udpServerWorker(void*);

@@ -9,7 +9,8 @@
 #include <udp.h>
 
 // Example function that just sends back what it gets
-static void onMessageRecieved(void* instance, const char* newMessage, struct sockaddr_in sinRemote)
+static void
+onMessageRecieved(void* instance, const char* newMessage, struct sockaddr_in sinRemote)
 {
     // Not using instance so just casting it to null in this example to get rid of warnings that it isn't used
     // If you know how to make it stop a better way please tell me!
@@ -18,7 +19,8 @@ static void onMessageRecieved(void* instance, const char* newMessage, struct soc
     Udp_sendUdpServerResponse(newMessage, sinRemote);
 }
 
-int main()
+int
+main()
 {
     Udp_initializeUdpServer();
 
@@ -30,8 +32,7 @@ int main()
 
     Udp_attachToUdpServer(&exampleObserver);
 
-    while(true)
-    {
+    while(true) {
         char input[32];
         printf("Enter anything to stop the server: ");
         scanf("%s", input);
