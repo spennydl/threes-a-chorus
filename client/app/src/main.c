@@ -2,7 +2,9 @@
 // Has main(); does initialization and cleanup and perhaps some basic logic.
 
 #include <stdio.h>
-#include <hal/udp.h>
+#include <stdlib.h>
+#include <hal/tcp.h>
+#include <string.h>
 
 int 
 main(int argc, char **argv)
@@ -12,10 +14,24 @@ main(int argc, char **argv)
         return 0;
     }
 
-    Udp_initializeUdpClient(argv[1]);
+    Tcp_initializeTcpClient(argv[1]);
 
     char buffer[MAX_BUFFER_SIZE];
-    Udp_makeServerRequest("Hello World!", buffer);
 
-    printf("Made request and got: %s\n", buffer);
+    while(1) {
+        char message[128];
+        printf("Enter message (stop to stop): ");
+        scanf("%s", message);
+
+        if(strcmp(message, "stop") == 0) {
+            break;
+        }
+
+        ssize_t res = Tcp_makeServerRequest(message, buffer);
+        printf("Made request and got (%d): %s\n", res, buffer);
+    }
+
+    
+
+    Tcp_cleanupTcpClient();
 }

@@ -6,10 +6,10 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 
-#include <udp.h>
+#include <tcp.h>
 
 // Example function that just sends back what it gets
-static void onMessageRecieved(void* instance, const char* newMessage, struct sockaddr_in sinRemote)
+static void onMessageRecieved(void* instance, const char* newMessage, int socketFd)
 {
     // Not using instance so just casting it to null in this example to get rid of warnings that it isn't used
     // If you know how to make it stop a better way please tell me!
@@ -17,20 +17,21 @@ static void onMessageRecieved(void* instance, const char* newMessage, struct soc
     
     printf("Got: %s. Echoing!\n", newMessage);
 
-    Udp_sendUdpServerResponse(newMessage, sinRemote);
+    ssize_t res = Tcp_sendTcpServerResponse(newMessage, socketFd);
+    printf("Code from echo: %ld\n", res);
 }
 
 int main()
 {
-    Udp_initializeUdpServer();
+    Tcp_initializeTcpServer();
 
     int uselessServerInstance = 42;
 
-    UdpObserver exampleObserver;
+    TcpObserver exampleObserver;
     exampleObserver.instance = &uselessServerInstance;
     exampleObserver.notification = onMessageRecieved;
 
-    Udp_attachToUdpServer(&exampleObserver);
+    Tcp_attachToTcpServer(&exampleObserver);
 
     while(true)
     {
@@ -40,5 +41,7 @@ int main()
         break;
     }
 
-    Udp_cleanUpUdpServer();
+    printf("Shutting down!\n");
+
+    Tcp_cleanUpTcpServer();
 }
