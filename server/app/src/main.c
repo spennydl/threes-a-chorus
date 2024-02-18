@@ -15,6 +15,8 @@ static void onMessageRecieved(void* instance, const char* newMessage, struct soc
     // If you know how to make it stop a better way please tell me!
     (void)instance;
     
+    printf("Got: %s. Echoing!\n", newMessage);
+
     Udp_sendUdpServerResponse(newMessage, sinRemote);
 }
 
