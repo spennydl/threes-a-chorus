@@ -5,8 +5,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <arpa/inet.h>
-
+#include <sys/stat.h>
 #include <tcp.h>
+#include <string.h>
 
 // Example function that just sends back what it gets
 static void

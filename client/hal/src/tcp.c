@@ -15,7 +15,7 @@ static int sockfd;
 static unsigned int serverlen;
 static struct sockaddr_in serverAddress;
 
-struct hostent *server;
+static struct hostent *server;
 
 static ssize_t
 Tcp_sendExitCode()

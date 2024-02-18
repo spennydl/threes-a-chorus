@@ -1,6 +1,8 @@
-// For TCP server stuff
-// Code in this section adapted from the slides
-// Observer pattern implementation adapted from adamtornhill.com
+/**
+ * @file tcp.h
+ * @brief For TCP server hosting. Interface using observer pattern for separation.
+ * Adapted from the slides and from adamtornhill.com for the observer pattern.
+*/
 #pragma once
 
 #define MAX_LEN 1024
@@ -20,22 +22,37 @@ typedef struct
 
 } TcpObserver;
 
+/**
+ * Initialize TCP server
+*/
 void
 Tcp_initializeTcpServer();
 
+/**
+ * Clean up TCP server (join threads, close sockets)
+*/
 void
 Tcp_cleanUpTcpServer();
 
-// Nice and easy util method for sending back responses!
+/**
+ * Send a response to a message from socketFd
+ * @param message The response
+ * @param socketFd File descriptor of socket to send to.
+*/
 ssize_t
 Tcp_sendTcpServerResponse(const char* message, int socketFd);
 
-// Add a new observer
+/**
+ * Add a new observer
+ * @param observer The observer to add
+*/
 void
 Tcp_attachToTcpServer(const TcpObserver* observer);
 
 // TODO: Remove an observer? Not sure if needed really for our usecase
 
-// Worker thread
+/**
+ * Worker thread function for the server. It is not static because there were compilation issues.
+*/
 void*
 tcpServerWorker(void*);
