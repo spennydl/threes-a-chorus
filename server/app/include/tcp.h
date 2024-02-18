@@ -20,16 +20,22 @@ typedef struct
 
 } TcpObserver;
 
-void Tcp_initializeTcpServer();
-void Tcp_cleanUpTcpServer();
+void
+Tcp_initializeTcpServer();
+
+void
+Tcp_cleanUpTcpServer();
 
 // Nice and easy util method for sending back responses!
-ssize_t Tcp_sendTcpServerResponse(const char* message, int socketFd);
+ssize_t
+Tcp_sendTcpServerResponse(const char* message, int socketFd);
 
 // Add a new observer
-void Tcp_attachToTcpServer(const TcpObserver* observer);
+void
+Tcp_attachToTcpServer(const TcpObserver* observer);
 
 // TODO: Remove an observer? Not sure if needed really for our usecase
 
 // Worker thread
-void* tcpServerWorker(void*);
+void*
+tcpServerWorker(void*);

@@ -9,7 +9,8 @@
 #include <tcp.h>
 
 // Example function that just sends back what it gets
-static void onMessageRecieved(void* instance, const char* newMessage, int socketFd)
+static void
+onMessageRecieved(void* instance, const char* newMessage, int socketFd)
 {
     // Not using instance so just casting it to null in this example to get rid of warnings that it isn't used
     // If you know how to make it stop a better way please tell me!
@@ -21,7 +22,8 @@ static void onMessageRecieved(void* instance, const char* newMessage, int socket
     printf("Code from echo: %ld\n", res);
 }
 
-int main()
+int
+main()
 {
     Tcp_initializeTcpServer();
 
