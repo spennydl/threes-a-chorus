@@ -3,6 +3,7 @@
 
 #include <malloc.h>
 #include <math.h>
+#include <pthread.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -11,6 +12,32 @@
 #define SAMPLE_RATE 44100
 
 #define ADSR_UPDATES_PER_SEC 32
+
+typedef enum
+{
+    UPDATE_NOTE,
+    UPDATE_NOTE_ON,
+    UPDATE_NOTE_OFF,
+    UPDATE_OP_STRENGTH,
+    UPDATE_OP_CM
+} _FmParamUpdateType;
+
+typedef struct _FmUpdate
+{
+    _FmParamUpdateType type;
+    struct _FmUpdate* next;
+    FmOperator op;
+    union
+    {
+        Note noteVal;
+        double doubleVal;
+        struct
+        {
+            unsigned char C;
+            unsigned char M;
+        } CmVal;
+    };
+} _FmParamUpdate;
 
 typedef struct
 {
@@ -38,6 +65,9 @@ typedef struct
     double opModBy[FM_OPERATORS * FM_OPERATORS];
 
     AdsrEnvelope opAdsr[FM_OPERATORS];
+
+    _FmParamUpdate* updates;
+    pthread_mutex_t updateMutex;
 } _FmSynth;
 
 inline static double
@@ -46,6 +76,27 @@ static void
 configure(FmSynthesizer* synth, const FmSynthParams* params);
 static _FmSynth*
 fmSynthAlloc(void);
+
+/// Set the carrier note
+static void
+_setNote(_FmSynth* synth, Note note);
+
+static void
+_setOpFrequency(_FmSynth* synth, FmOperator op, double freq);
+
+static void
+_setOperatorCM(_FmSynth* synth,
+               FmOperator op,
+               unsigned char C,
+               unsigned char M);
+
+static void
+_setOpStrength(_FmSynth* synth, FmOperator op, double strength);
+
+static void
+_noteOn(_FmSynth* synth);
+static void
+_noteOff(_FmSynth* synth);
 
 static _FmSynth*
 fmSynthAlloc(void)
@@ -69,7 +120,9 @@ configure(FmSynthesizer* syn, const FmSynthParams* params)
 {
     _FmSynth* synth = syn->__FmSynth;
     if (NULL != synth) {
-        Fm_setNote(syn, params->note);
+        pthread_mutex_init(&synth->updateMutex, NULL);
+
+        _setNote(synth, params->note);
         synth->sampleRate = params->sampleRate;
         synth->carrierStep = calcStep(synth->carrierFreq, synth->sampleRate);
         synth->envelope = 0.0;
@@ -81,6 +134,8 @@ configure(FmSynthesizer* syn, const FmSynthParams* params)
         synth->adsr.attackPeak = 0.75;
         synth->adsr.sustainLevel = 0.55;
         Env_adsrInit(&synth->adsr, ADSR_UPDATES_PER_SEC, synth->sampleRate);
+
+        synth->updates = NULL;
 
         for (int op = 0; op < FM_OPERATORS; op++) {
             const OperatorParams* opParams = &params->opParams[op];
@@ -143,7 +198,11 @@ Fm_createFmSynthesizer(const FmSynthParams* params)
 void
 Fm_destroySynthesizer(FmSynthesizer* synth)
 {
+
     if (NULL != synth) {
+        _FmSynth* s = synth->__FmSynth;
+        pthread_mutex_destroy(&s->updateMutex);
+        // TODO we're leaking the queue
         if (NULL != synth->__FmSynth) {
             free(synth->__FmSynth);
         }
@@ -164,10 +223,9 @@ Fm_connectOperators(FmSynthesizer* s,
 }
 
 /// Set the carrier note
-void
-Fm_setNote(FmSynthesizer* s, Note note)
+static void
+_setNote(_FmSynth* synth, Note note)
 {
-    _FmSynth* synth = s->__FmSynth;
     // Frequency of a note relative to a reference frequency is given by:
     //
     // $$ F * 2^{N / 12} $$
@@ -181,14 +239,35 @@ Fm_setNote(FmSynthesizer* s, Note note)
     synth->note = note;
 
     for (int op = 0; op < FM_OPERATORS; op++) {
-        Fm_setOpFrequency(s, op, synth->carrierFreq * synth->opCM[op]);
+        _setOpFrequency(synth, op, synth->carrierFreq * synth->opCM[op]);
     }
 }
 
-// TODO: Do we need to continue to support both specific operator frequencies as
-// well as ratios?
-//
-// Either way this will need some cleaning up.
+static void
+_addUpdateToQueue(_FmSynth* synth, _FmParamUpdate* update)
+{
+    pthread_mutex_lock(&synth->updateMutex);
+    _FmParamUpdate** head = &synth->updates;
+    while (*head != NULL) {
+        *head = (*head)->next;
+    }
+    *head = update;
+    pthread_mutex_unlock(&synth->updateMutex);
+}
+
+void
+Fm_setNote(FmSynthesizer* s, Note note)
+{
+    _FmSynth* synth = s->__FmSynth;
+
+    _FmParamUpdate* update = malloc(sizeof(_FmParamUpdate));
+    update->next = NULL;
+    update->type = UPDATE_NOTE;
+    update->noteVal = note;
+
+    _addUpdateToQueue(synth, update);
+}
+
 void
 Fm_setOperatorCM(FmSynthesizer* s,
                  FmOperator
@@ -197,16 +276,75 @@ Fm_setOperatorCM(FmSynthesizer* s,
                  unsigned char M)
 {
     _FmSynth* synth = s->__FmSynth;
-    double ratio = (double)C / (double)M;
-    synth->opCM[operator] = ratio;
-    double op_freq = synth->carrierFreq * ratio;
-    Fm_setOpFrequency(s, operator, op_freq);
+    _FmParamUpdate* update = malloc(sizeof(_FmParamUpdate));
+    update->next = NULL;
+
+    update->CmVal.C = C;
+    update->CmVal.M = M;
+    update->op = operator;
+
+    _addUpdateToQueue(synth, update);
 }
 
 void
-Fm_noteOn(FmSynthesizer* s)
+Fm_performQueuedUpdates(FmSynthesizer* s)
 {
     _FmSynth* synth = s->__FmSynth;
+
+    pthread_mutex_lock(&synth->updateMutex);
+
+    _FmParamUpdate* updateHead = synth->updates;
+    while (updateHead != NULL) {
+        switch (updateHead->type) {
+            case UPDATE_NOTE: {
+                _setNote(synth, updateHead->noteVal);
+                break;
+            }
+            case UPDATE_OP_STRENGTH: {
+                _setOpStrength(synth, updateHead->op, updateHead->doubleVal);
+                break;
+            } break;
+            case UPDATE_OP_CM: {
+                _setOperatorCM(synth,
+                               updateHead->op,
+                               updateHead->CmVal.C,
+                               updateHead->CmVal.M);
+                break;
+            }
+            case UPDATE_NOTE_ON: {
+                _noteOn(synth);
+                break;
+            }
+            case UPDATE_NOTE_OFF: {
+                _noteOff(synth);
+                break;
+            }
+            default: {
+                // TODO: This shouldnt happen but we should do something?
+                break;
+            }
+        }
+        _FmParamUpdate* next = updateHead->next;
+        free(updateHead);
+        updateHead = next;
+    }
+    synth->updates = updateHead; // should be NULL now
+
+    pthread_mutex_unlock(&synth->updateMutex);
+}
+
+static void
+_setOperatorCM(_FmSynth* synth, FmOperator op, unsigned char C, unsigned char M)
+{
+    double ratio = (double)C / (double)M;
+    synth->opCM[op] = ratio;
+    double op_freq = synth->carrierFreq * ratio;
+    _setOpFrequency(synth, op, op_freq);
+}
+
+static void
+_noteOn(_FmSynth* synth)
+{
     Env_adsrTrigger(&synth->adsr);
     for (int op = 0; op < FM_OPERATORS; op++) {
         Env_adsrTrigger(&synth->opAdsr[op]);
@@ -214,30 +352,58 @@ Fm_noteOn(FmSynthesizer* s)
 }
 
 void
-Fm_noteOff(FmSynthesizer* s)
+Fm_noteOn(FmSynthesizer* s)
 {
+    _FmParamUpdate* update = malloc(sizeof(_FmParamUpdate));
+    update->next = NULL;
     _FmSynth* synth = s->__FmSynth;
+    update->type = UPDATE_NOTE_ON;
+    _addUpdateToQueue(synth, update);
+}
+
+static void
+_noteOff(_FmSynth* synth)
+{
     Env_adsrGate(&synth->adsr);
     for (int op = 0; op < FM_OPERATORS; op++) {
         Env_adsrGate(&synth->opAdsr[op]);
     }
 }
 
-/// Explicitly set the frequency of an oeprator.
 void
-Fm_setOpFrequency(FmSynthesizer* s, FmOperator op, double freq)
+Fm_noteOff(FmSynthesizer* s)
 {
+    _FmParamUpdate* update = malloc(sizeof(_FmParamUpdate));
+    update->next = NULL;
     _FmSynth* synth = s->__FmSynth;
-    // TODO
-    // synth->op_freq[op] = freq;
+    update->type = UPDATE_NOTE_OFF;
+    _addUpdateToQueue(synth, update);
+}
+/// Explicitly set the frequency of an oeprator.
+static void
+_setOpFrequency(_FmSynth* synth, FmOperator op, double freq)
+{
     synth->opStep[op] = calcStep(freq, synth->sampleRate);
+}
+
+static void
+_setOpStrength(_FmSynth* synth, FmOperator op, double strength)
+{
+    synth->opStrength[op] = strength;
 }
 
 void
 Fm_setOpStrength(FmSynthesizer* s, FmOperator op, double strength)
 {
+    _FmParamUpdate* update = malloc(sizeof(_FmParamUpdate));
+    update->next = NULL;
+
     _FmSynth* synth = s->__FmSynth;
-    synth->opStrength[op] = strength;
+    update->type = UPDATE_OP_STRENGTH;
+    update->op = op;
+    update->doubleVal = strength;
+
+    _addUpdateToQueue(synth, update);
 }
 
 inline static double

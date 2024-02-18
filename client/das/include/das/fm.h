@@ -115,6 +115,9 @@ Fm_noteOff(FmSynthesizer* synth);
 void
 Fm_noteOn(FmSynthesizer* synth);
 
+void
+Fm_performQueuedUpdates(FmSynthesizer* s);
+
 /// Get the frequency of an operator.
 double
 Fm_getOpFrequency(FmSynthesizer* synth, FmOperator op);
