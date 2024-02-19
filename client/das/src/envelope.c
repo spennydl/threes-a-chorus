@@ -1,5 +1,14 @@
+/**
+ * @file envelope.c
+ * @brief ADSR envelope implementation.
+ *
+ * I expect this to change at some point.
+ *
+ * @author Spencer Leslie
+ */
 #include "das/envelope.h"
 
+/** Transitions */
 static void
 _adsrTransitionAttack(AdsrEnvelope* adsr)
 {

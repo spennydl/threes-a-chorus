@@ -1,11 +1,27 @@
+/**
+ * @file fm.h
+ * @brief Frequency-Modulation Synthesizer.
+ *
+ * This FM synthesizer consists of 4 operators, each of which independently
+ * output a sine, saw, or square wave with an independent envelope at a
+ * frequency relative to a base frequency. The operators can act as input to any
+ * other operators or themselves, and any or all operators can be mixed together
+ * and sound.
+ *
+ * @author Spencer Leslie
+ */
 #pragma once
 
+#include "das/envelope.h"
 #include "das/wavetable.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
+/** A440 as a reference frequency. */
 #define A_440 440.0
 
+/** Notes. */
 typedef enum
 {
     A4 = 0,
@@ -23,6 +39,7 @@ typedef enum
     A5
 } Note;
 
+/** Operators available. Adding more is as simple as adding more values here. */
 typedef enum
 {
     FM_OPERATOR0 = 0,
@@ -32,103 +49,171 @@ typedef enum
     FM_OPERATORS
 } FmOperator;
 
+/** Parameters for each operator. */
 typedef struct
 {
-    double strength;
+    /**
+     * The CM ratio, or the ratio between this operators frequency and the base
+     * frequency.
+     */
+    double CmRatio;
+
+    /**
+     * How much this operator is mixed into the final output. Should be in
+     * [0.0, 1.0].
+     */
+    double outputStrength;
+
+    /**
+     * Which operators should act as input to this operator. All values should
+     * be in [0.0, 1.0].
+     *
+     * If O is a vector of the output values of all operators, the input value
+     * to this operator will be the dot product of V and algorithmConnections.
+     */
+    double algorithmConnections[FM_OPERATORS];
+
+    /** Type of the wave the operator should output. */
     WaveType waveType;
-    unsigned char C;
-    unsigned char M;
+
+    /** The operator's envelope. */
+    AdsrEnvelope adsr;
 } OperatorParams;
 
+/** Parameters for the synthesizer. */
 typedef struct
 {
+    /** @brief The note the synthesizer should play. */
     Note note;
+
+    /**
+     * @brief The sample rate of the synthesizer.
+     *
+     * I don't see a reason not to sample at 44100hz, so this might move to a
+     * constant at some point.
+     */
     size_t sampleRate;
-    WaveType carrierWaveType;
+
+    /**
+     * @brief Operator paramters.
+     */
     OperatorParams opParams[FM_OPERATORS];
 } FmSynthParams;
 
+/**
+ * @brief "Default" parameters.
+ *
+ * Configures OPERATOR0 to output a simple sine wave at A440.
+ */
 static const FmSynthParams FM_DEFAULT_PARAMS = {
     .note = A4,
     .sampleRate = 44100,
-    .carrierWaveType = WAVETYPE_SINE,
-    .opParams = { { .strength = 0.0,
-                    .waveType = WAVETYPE_SINE,
-                    .C = 1,
-                    .M = 2 },
-                  { .strength = 0.0,
-                    .waveType = WAVETYPE_SINE,
-                    .C = 1,
-                    .M = 2 },
-                  { .strength = 0.0,
-                    .waveType = WAVETYPE_SINE,
-                    .C = 1,
-                    .M = 2 },
-                  { .strength = 0.0,
-                    .waveType = WAVETYPE_SINE,
-                    .C = 1,
-                    .M = 2 } }
+    .opParams = { { .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0,
+                    .outputStrength = 1.0,
+                    .algorithmConnections = { 0.0, 0.0, 0.0, 0.0 },
+                    .adsr = { .attackMs = 400,
+                              .decayMs = 100,
+                              .releaseMs = 800,
+                              .attackPeak = 0.75,
+                              .sustainLevel = 0.55 } },
+                  { .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0 / 2.0,
+                    .algorithmConnections = { 0 },
+                    .adsr = { .attackMs = 400,
+                              .decayMs = 100,
+                              .releaseMs = 800,
+                              .attackPeak = 0.75,
+                              .sustainLevel = 0.55 } },
+
+                  { .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0 / 2.0,
+                    .algorithmConnections = { 0 },
+                    .adsr = { .attackMs = 400,
+                              .decayMs = 100,
+                              .releaseMs = 800,
+                              .attackPeak = 0.75,
+                              .sustainLevel = 0.55 } },
+                  { .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0 / 2.0,
+                    .algorithmConnections = { 0 },
+                    .adsr = { .attackMs = 400,
+                              .decayMs = 100,
+                              .releaseMs = 800,
+                              .attackPeak = 0.75,
+                              .sustainLevel = 0.55 } } }
 };
 
-/// External-facing type for the fm synth
+/**
+ * @brief External FmSythesizer handle.
+ */
 typedef struct
 {
     void* __FmSynth;
 } FmSynthesizer;
 
-/// Create a new FM synth with default parameters.
+/**
+ * @brief Create a new FM synth with default parameters.
+ *
+ * @return The FmSynthesizer or NULL on error.
+ */
 FmSynthesizer*
 Fm_defaultSynthesizer(void);
 
-/// Create a new FM synth
+/**
+ * @brief Create a new FM synth with the given parameters.
+ *
+ * @return The FmSynthesizer or NULL on error.
+ */
 FmSynthesizer*
 Fm_createFmSynthesizer(const FmSynthParams* params);
 
-/// Destry an FM synth
+/**
+ * @brief Destroy the synthesizer.
+ *
+ * @param synth The synth to destroy.
+ */
 void
 Fm_destroySynthesizer(FmSynthesizer* synth);
 
-/// Connect an operator to another
-void
-Fm_connectOperators(FmSynthesizer* synth,
-                    FmOperator from,
-                    FmOperator to,
-                    double strength);
-
-/// Set the carrier note
-void
-Fm_setNote(FmSynthesizer* synth, Note note);
-
-/// Sets the frequency of an operator relative to the frequency of the carrier.
-/// The desired frequency is computed as a ratio between the operator and the
-/// carrier where C is the carrier (numerator) and M is the operator
-/// (denominator)
-void
-Fm_setOperatorCM(FmSynthesizer* synth,
-                 FmOperator
-                 operator,
-                 unsigned char C,
-                 unsigned char M);
-
-void
-Fm_noteOff(FmSynthesizer* synth);
+/**
+ * @brief Trigger the ADSR and start playing the currently configured note.
+ *
+ * This function is thread-safe.
+ *
+ * @param synth The synth.
+ */
 void
 Fm_noteOn(FmSynthesizer* synth);
 
+/**
+ * @brief Gate the ADSR and stop playing.
+ *
+ * This function is thread-safe.
+ *
+ * @param synth The synth.
+ */
 void
-Fm_performQueuedUpdates(FmSynthesizer* s);
+Fm_noteOff(FmSynthesizer* synth);
 
-/// Get the frequency of an operator.
-double
-Fm_getOpFrequency(FmSynthesizer* synth, FmOperator op);
-
-/// Explicitly set the frequency of an oeprator.
+/**
+ * @brief Apply the given parameters to the synthesizer.
+ *
+ * This function is NOT thread-safe. Do not call it if @ref
+ * Fm_generateSamples is running in another thread.
+ *
+ * @param synth The synth to update.
+ * @param params The params to apply.
+ */
 void
-Fm_setOpFrequency(FmSynthesizer* synth, FmOperator op, double freq);
+Fm_updateParams(FmSynthesizer* synth, FmSynthParams* params);
 
-void
-Fm_setOpStrength(FmSynthesizer* synth, FmOperator op, double strength);
-
-/// Generate n_samples samples in the sample_buf
+/**
+ * @brief Generate a given number of frames into a given buffer.
+ *
+ * @param synth The synth to use for generating.
+ * @param sampleBuf The buffer to write samples to.
+ * @param nSamples How many samples to write.
+ */
 void
 Fm_generateSamples(FmSynthesizer* synth, int16_t* sampleBuf, size_t nSamples);
