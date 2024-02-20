@@ -23,6 +23,29 @@ typedef struct
 
 static _FmPlayer* _fmPlayer;
 
+// TODO: It occurs to me: why are we even bufferring at all?
+//
+// I think the original rationale was to ensure that we could be generating
+// samples while we're sending them to the speakers. `snd_pcm_writei` blocks,
+// and we can use the blocking time to generate the next set of samples.
+// However, we have to be careful, as this means we are generating samples ahead
+// of time and will miss events and configuration changes. If we've filled a
+// buffer full of 8 chunks of 0.05s of samples each and a "note on" event
+// happens, that note will not be played for at least 0.4 seconds! That's huge!
+//
+// There are a few things we could do instead:
+//
+// - Write PCM data directly from the synthesizer :: This option is nice and
+//   simple. Further, alsa supports non-blocking PCM streams, and memory-mapped
+//   IO into the audio buffer.
+// - Create a frontbuffer/backbuffer :: This module could be adapted for this
+//   approach pretty simply, in fact I think we would get this by simply using 2
+//   CBuffer chunks.
+//
+// I'm leaning towards the former here. We could potentially generate frames
+// /directly into/ the audio buffer, which would be amazing for reducing
+// latency.
+
 static void
 _synthCBufWrite(int16_t* chunk, size_t bufSize)
 {
