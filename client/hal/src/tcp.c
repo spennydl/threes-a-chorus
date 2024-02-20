@@ -65,7 +65,19 @@ Tcp_cleanupTcpClient()
 ssize_t
 Tcp_makeServerRequest(char* message, char* buffer)
 {
-    send(sockfd, message, strlen(message), 0);
+    Tcp_sendMessage(message);
     bzero(buffer, MAX_BUFFER_SIZE);
+    return Tcp_receiveMessage(buffer);
+}
+
+ssize_t
+Tcp_sendMessage(char* message)
+{
+    return send(sockfd, message, strlen(message), 0);
+}
+
+ssize_t
+Tcp_receiveMessage(char* buffer)
+{
     return recv(sockfd, buffer, MAX_BUFFER_SIZE, 0);
 }

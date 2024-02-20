@@ -29,3 +29,19 @@ Tcp_cleanupTcpClient();
 */
 ssize_t
 Tcp_makeServerRequest(char* message, char* buffer);
+
+/**
+ * Send a message to the server
+ * @param message The message to send
+ * @return ssize_t Return the number of bytes sent or error code if fails
+*/
+ssize_t
+Tcp_sendMessage(char* message);
+
+/**
+ * Block until the server sends a message
+ * @param buffer Buffer to put response into. Expects length to be MAX_SIZE
+ * @return ssize_t Return the number of bytes read into buffer or error code if fails
+*/
+ssize_t
+Tcp_receiveMessage(char* buffer);

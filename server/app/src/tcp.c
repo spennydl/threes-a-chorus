@@ -28,7 +28,9 @@ pthread_t tcpServerThreadId;
 static atomic_bool tcpServerRunning = true;
 
 static atomic_int connections = 0;
-pthread_t connectionThreads[MAX_CONNECTIONS]; // No way we ever have more than this right?
+
+// TODO: Turn this into a pool so we can reuse threads!
+pthread_t connectionThreads[MAX_CONNECTIONS];
 
 
 static void
@@ -164,8 +166,6 @@ tcpServerConnectionHandler(void* socketFdArg)
         sendMessageToObservers(buffer, socketFd);
     }
 
-    connections--;
-
     close(socketFd);
 
     return NULL;
@@ -197,11 +197,8 @@ tcpServerWorker(void* p)
         }
 
         pthread_create(&connectionThreads[connections], NULL, tcpServerConnectionHandler, (void*)(uintptr_t)socketFd);
+        pthread_detach(connectionThreads[connections]);
         connections++;
-    }
-
-    for(int i = 0; i < MAX_CONNECTIONS; i++) {
-        pthread_join(connectionThreads[i], NULL);
     }
 
     return NULL;
