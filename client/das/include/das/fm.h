@@ -118,7 +118,7 @@ static const FmSynthParams FM_DEFAULT_PARAMS = {
                               .attackPeak = 0.75,
                               .sustainLevel = 0.55 } },
                   { .waveType = WAVETYPE_SINE,
-                    .CmRatio = 1.0 / 2.0,
+                    .CmRatio = 2.0 / 1.0,
                     .algorithmConnections = { 0 },
                     .adsr = { .attackMs = 400,
                               .decayMs = 100,

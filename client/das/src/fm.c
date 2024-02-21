@@ -147,7 +147,6 @@ _configure(_FmSynth* synth, const FmSynthParams* params, bool initialize)
             synth->opWave[op] = opParams->waveType;
 
             _setOperatorCM(synth, op, params->opParams[op].CmRatio);
-            synth->opEnvelope[op] = 0.00; // TODO: Envelopes.
             synth->opOutput[op] = opParams->outputStrength;
 
             synth->opAdsr[op].attackMs = opParams->adsr.attackMs;
@@ -221,6 +220,7 @@ Fm_defaultSynthesizer(void)
     if (!synth) {
         return NULL;
     }
+    memset(synth, 0, sizeof(_FmSynth));
 
     FmSynthesizer* fmSynth = malloc(sizeof(FmSynthesizer));
     if (!fmSynth) {
@@ -310,13 +310,12 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
         // This will affect the next sample.
         for (int op = 0; op < FM_OPERATORS; op++) {
             int idx = op * FM_OPERATORS;
+            opMod[op] = 0;
             for (int modOp = 0; modOp < FM_OPERATORS; modOp++) {
                 opMod[op] += synth->opModBy[idx + modOp] * opSamples[modOp];
             }
 
-            synth->opAngle[op] +=
-              synth->opStep[op] + (synth->opStep[op] * opMod[op]);
-
+            synth->opAngle[op] += synth->opStep[op] + opMod[op];
             synth->opAngle[op] = cycle2Pi(synth->opAngle[op]);
         }
 
@@ -342,6 +341,9 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
         double finalSample = 0;
         for (int op = 0; op < FM_OPERATORS; op++) {
             finalSample += opSamples[op] * synth->opOutput[op];
+            if (finalSample >= 1) {
+                fprintf(stderr, "WARN: sample greater than 1!\n");
+            }
         }
         sampleBuf[s] = finalSample * INT16_MAX;
     }
