@@ -5,10 +5,14 @@
 #include <stdlib.h>
 
 #include "tcpExample.h"
+#include "ultrasonicExample.h"
 
-int 
-main(int argc, char **argv)
+int
+main(int argc, char** argv)
 {
-    tcpExample(argc, argv);
+    (void)argc;
+    (void)argv;
+    // tcpExample(argc, argv);
+    ultrasonicExample();
     return 0;
 }
