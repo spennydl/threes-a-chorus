@@ -39,3 +39,22 @@ tcpExample(int argc, char **argv)
 
     Tcp_cleanupTcpClient();
 }
+
+
+/**
+ * Just an example function that takes in main's args to use them as main would and asks for a file from the server and saves it as "test.midi"
+*/
+void
+tcpFileExample(int argc, char **argv)
+{
+    if (argc != 2) {
+        printf("Error: Must specify hostname (ip in this case) of tac server! (ex: ./tac 192.168.7.1)\n");
+        exit(0);
+    }
+
+    Tcp_initializeTcpClient(argv[1]);
+
+    Tcp_requestFile("midis/test.midi");
+
+    Tcp_cleanupTcpClient();
+}

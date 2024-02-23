@@ -117,7 +117,7 @@ Tcp_sendFile(char* path, int socketFd)
 {
     int fd = open(path, O_RDONLY);
     struct stat fileStat;
-    char fileSize[256];
+    char fileSize[MAX_LEN];
 
     if(fd == -1) {
         char error[512];
@@ -131,8 +131,8 @@ Tcp_sendFile(char* path, int socketFd)
         return 0;
     }
 
-    snprintf(fileSize, sizeof(fileSize), "%ld", fileStat.st_size);
-
+    snprintf(fileSize, MAX_LEN, "%ld", fileStat.st_size);
+    
     // First send file size
     Tcp_sendTcpServerResponse(fileSize, socketFd);
 
@@ -140,12 +140,12 @@ Tcp_sendFile(char* path, int socketFd)
     int remainingData = fileStat.st_size;
     int sentBytes = -1;
 
-    while(((sentBytes = sendfile(socketFd, fd, &offset, MAX_LEN)) > 0) && (remainingData > 0)) {
+    while(((sentBytes = sendfile(socketFd, fd, &offset, BUFSIZ)) > 0) && (remainingData > 0)) {
         remainingData -= sentBytes;
     }
 
     close(fd);
-    return fileStat.st_size;
+    return fileStat.st_size - remainingData;
 }
 
 void

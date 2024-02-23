@@ -81,3 +81,42 @@ Tcp_receiveMessage(char* buffer)
 {
     return recv(sockfd, buffer, MAX_BUFFER_SIZE, 0);
 }
+
+ssize_t
+Tcp_requestFile(char* fileName)
+{
+    Tcp_sendMessage(SEND_FILE);
+    char fileSizeBuffer[MAX_BUFFER_SIZE];
+    Tcp_receiveMessage(fileSizeBuffer);
+    int fileSize = atoi(fileSizeBuffer);
+    
+    FILE* receivedFile = fopen(fileName, "w");
+
+    if(receivedFile == NULL) {
+        char errorMessage[512];
+        snprintf(errorMessage, 512, "Could not open '%s' to write!", fileName);
+        error(errorMessage);
+        return -1;
+    }
+
+    int remainingData = fileSize;
+    ssize_t len;
+    char buffer[BUFSIZ];
+
+    while((remainingData > 0) && ((len = recv(sockfd, buffer, BUFSIZ, 0)) > 0)) {
+        fwrite(buffer, sizeof(char), len, receivedFile);
+        remainingData -= len;
+
+        #ifdef DEV
+        printf("%d bytes left\n", remainingData);
+        #endif
+    }
+
+
+    #ifdef DEV
+    printf("done!\n");
+    #endif
+
+    fclose(receivedFile);
+    return remainingData;
+}

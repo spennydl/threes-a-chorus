@@ -17,7 +17,7 @@ onMessageRecieved(void* instance, const char* newMessage, int socketFd)
     // If you know how to make it stop a better way please tell me!
     (void)instance;
 
-    if(strcmp(newMessage, "file\n") != 0) {
+    if(strcmp(newMessage, SEND_FILE) != 0) {
         printf("Got: %s. Echoing!\n", newMessage);
         ssize_t res = Tcp_sendTcpServerResponse(newMessage, socketFd);
         printf("Code from echo: %ld\n", res);

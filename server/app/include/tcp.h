@@ -8,6 +8,7 @@
 #define MAX_LEN 1024
 #define PORT 12345
 #define EXIT_CODE "TIMETOGOBYE"
+#define SEND_FILE "file"
 #define MAX_CONNECTIONS 16
 
 // The prototype for the function that is called when an observer is told about a new message

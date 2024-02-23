@@ -9,6 +9,6 @@
 int 
 main(int argc, char **argv)
 {
-    tcpExample(argc, argv);
+    tcpFileExample(argc, argv);
     return 0;
 }

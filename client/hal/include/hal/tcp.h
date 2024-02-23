@@ -4,9 +4,11 @@
 */
 #pragma once
 
+#define DEV
 #define PORT 12345
 #define MAX_BUFFER_SIZE 1024
 #define EXIT_CODE "TIMETOGOBYE"
+#define SEND_FILE "file"
 
 /**
  * Initialize TCP client from hostname
@@ -45,3 +47,6 @@ Tcp_sendMessage(char* message);
 */
 ssize_t
 Tcp_receiveMessage(char* buffer);
+
+ssize_t
+Tcp_requestFile(char* fileName);
