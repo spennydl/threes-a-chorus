@@ -9,6 +9,10 @@
 #include <assert.h>
 #include <stdatomic.h>
 #include <stdint.h>
+#include <sys/stat.h>
+#include <sys/sendfile.h>
+#include <sys/types.h>
+#include <fcntl.h>
 
 #include "tcp.h"
 
@@ -106,6 +110,42 @@ ssize_t
 Tcp_sendTcpServerResponse(const char* message, int socketFd)
 {
     return send(socketFd, message, strlen(message), 0);
+}
+
+ssize_t
+Tcp_sendFile(char* path, int socketFd)
+{
+    int fd = open(path, O_RDONLY);
+    struct stat fileStat;
+    char fileSize[256];
+
+    if(fd == -1) {
+        char error[512];
+        snprintf(error, 512, "Could not open '%s' to send!", path);
+        perror(error);
+        return fd;
+    }
+
+    if(fstat(fd, &fileStat) < 0) {
+        perror("Error getting file stat for file to send!");
+        return 0;
+    }
+
+    snprintf(fileSize, sizeof(fileSize), "%ld", fileStat.st_size);
+
+    // First send file size
+    Tcp_sendTcpServerResponse(fileSize, socketFd);
+
+    long int offset = 0;
+    int remainingData = fileStat.st_size;
+    int sentBytes = -1;
+
+    while(((sentBytes = sendfile(socketFd, fd, &offset, MAX_LEN)) > 0) && (remainingData > 0)) {
+        remainingData -= sentBytes;
+    }
+
+    close(fd);
+    return fileStat.st_size;
 }
 
 void

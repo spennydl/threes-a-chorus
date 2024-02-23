@@ -42,6 +42,9 @@ Tcp_cleanUpTcpServer();
 ssize_t
 Tcp_sendTcpServerResponse(const char* message, int socketFd);
 
+ssize_t
+Tcp_sendFile(char* path, int socketFd);
+
 /**
  * Add a new observer
  * @param observer The observer to add
