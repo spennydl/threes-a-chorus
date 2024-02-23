@@ -39,10 +39,17 @@ Tcp_cleanUpTcpServer();
  * Send a response to a message from socketFd
  * @param message The response
  * @param socketFd File descriptor of socket to send to.
+ * @return ssize_t Return the number of bytes sent or < 0 if fails
 */
 ssize_t
 Tcp_sendTcpServerResponse(const char* message, int socketFd);
 
+/**
+ * Send a file response to a message from socketFd
+ * @param path The relative path of the file to send (absolute seems to have issues right now)
+ * @param socketFd File descriptor of socket to send to.
+ * @return ssize_t Return the number of bytes sent or < 0 if fails
+*/
 ssize_t
 Tcp_sendFile(char* path, int socketFd);
 

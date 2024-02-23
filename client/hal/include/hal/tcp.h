@@ -48,5 +48,10 @@ Tcp_sendMessage(char* message);
 ssize_t
 Tcp_receiveMessage(char* buffer);
 
+/**
+ * Request a file from the server and download it as filename
+ * @param message Name to save recieved file as
+ * @return Number of bytes downloaded or -1 on fail
+*/
 ssize_t
 Tcp_requestFile(char* fileName);
