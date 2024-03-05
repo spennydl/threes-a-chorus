@@ -90,8 +90,7 @@ _noteOff(_FmSynth* synth);
 inline static double
 _calcStep(double freq, size_t sample_rate)
 {
-    // samples/sec / periods/sec(freq) = samples/period.
-    return PI2 / (sample_rate / freq);
+    return (freq / sample_rate);
 }
 
 inline static void
@@ -109,18 +108,6 @@ _updateAllOperatorFreq(_FmSynth* synth)
     }
 }
 
-inline static double
-cycle2Pi(double value)
-{
-    while (value < 0) {
-        value += PI2;
-    }
-    if (value > PI2) {
-        value = fmod(value, PI2);
-    }
-    return value;
-}
-
 static _FmSynth*
 _fmSynthAlloc(void)
 {
@@ -135,12 +122,9 @@ static void
 _configure(_FmSynth* synth, const FmSynthParams* params, bool initialize)
 {
     if (NULL != synth) {
-
         if (initialize) {
             synth->sampleRate = params->sampleRate;
         }
-
-        _setNote(synth, params->note);
 
         for (int op = 0; op < FM_OPERATORS; op++) {
             const OperatorParams* opParams = &params->opParams[op];
@@ -172,6 +156,13 @@ _configure(_FmSynth* synth, const FmSynthParams* params, bool initialize)
             }
         }
     }
+}
+
+void
+Fm_setNote(FmSynthesizer* s, Note note)
+{
+    _FmSynth* synth = s->__FmSynth;
+    _setNote(synth, note);
 }
 
 static void
@@ -312,11 +303,12 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
             int idx = op * FM_OPERATORS;
             opMod[op] = 0;
             for (int modOp = 0; modOp < FM_OPERATORS; modOp++) {
-                opMod[op] += synth->opModBy[idx + modOp] * opSamples[modOp];
+                opMod[op] += synth->opModBy[idx + modOp] *
+                             (opSamples[modOp] * synth->opStep[modOp]); // ??
             }
 
             synth->opAngle[op] += synth->opStep[op] + opMod[op];
-            synth->opAngle[op] = cycle2Pi(synth->opAngle[op]);
+            synth->opAngle[op] -= floor(synth->opAngle[op]);
         }
 
         // If we need to, update the ADSR envelope and triggers.

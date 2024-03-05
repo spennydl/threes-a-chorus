@@ -29,6 +29,7 @@ typedef struct
     FmSynthesizer* synth;
 
     FmSynthParams params;
+    Note note;
 } _FmPlayer;
 
 static _FmPlayer* _fmPlayer;
@@ -67,6 +68,11 @@ _play(void* arg)
         // set synth params if we need to
         if (_fmPlayer->update) {
             Fm_updateParams(_fmPlayer->synth, &_fmPlayer->params);
+        }
+
+        if (_fmPlayer->note != NOTE_NONE) {
+            Fm_setNote(_fmPlayer->synth, _fmPlayer->note);
+            _fmPlayer->note = NOTE_NONE;
         }
 
         // wait for a period to become available.
@@ -304,6 +310,12 @@ _configureAlsa(snd_pcm_t* handle)
         return err;
     }
     return 0;
+}
+
+void
+FmPlayer_setNote(Note note)
+{
+    _fmPlayer->note = note;
 }
 
 // TODO a better interface

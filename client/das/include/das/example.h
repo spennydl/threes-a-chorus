@@ -5,6 +5,7 @@
 
 #include "das/fm.h"
 #include "das/fmplayer.h"
+#include "das/sequencer.h"
 #include "hal/adc.h"
 #include <fcntl.h>
 #include <poll.h>
@@ -29,14 +30,35 @@ int
 example(void)
 {
     FmSynthParams params;
-    memcpy(&params, &FM_DEFAULT_PARAMS, sizeof(FmSynthParams));
+    memcpy(&params, &FM_BASS_PARAMS, sizeof(FmSynthParams));
 
     FmPlayer_initialize(&params);
 
-    FmPlayer_noteOn();
+    Sequencer_initialize(120);
+
+    Sequencer_fillSlot(Sequencer_getSlotIndex(0, 0, 0), SEQ_NOTE_ON, A4, NULL);
+    Sequencer_fillSlot(
+      Sequencer_getSlotIndex(0, 1, 0), SEQ_NOTE_OFF, NOTE_NONE, NULL);
+
+    Sequencer_fillSlot(Sequencer_getSlotIndex(1, 0, 0), SEQ_NOTE_ON, C4, NULL);
+    Sequencer_fillSlot(
+      Sequencer_getSlotIndex(1, 1, 0), SEQ_NOTE_OFF, NOTE_NONE, NULL);
+
+    Sequencer_fillSlot(Sequencer_getSlotIndex(2, 1, 0), SEQ_NOTE_ON, D4, NULL);
+    Sequencer_fillSlot(
+      Sequencer_getSlotIndex(3, 0, 0), SEQ_NOTE_LEGATO, Eb4, NULL);
+    Sequencer_fillSlot(
+      Sequencer_getSlotIndex(3, 1, 0), SEQ_NOTE_LEGATO, E4, NULL);
+
+    Sequencer_fillSlot(
+      Sequencer_getSlotIndex(4, 1, 0), SEQ_NOTE_LEGATO, E4, NULL);
+    Sequencer_fillSlot(
+      Sequencer_getSlotIndex(5, 1, 0), SEQ_NOTE_LEGATO, G4, NULL);
+
+    Sequencer_start();
 
     struct pollfd stdinp = { .fd = STDIN_FILENO, .events = POLLIN | POLLPRI };
-    double reading = 0;
+    // double reading = 0;
     while (true) {
 
         // poll for input on STDIN
@@ -58,21 +80,24 @@ example(void)
         }
 
         // Read a value from the pot
-        double newReading =
-          (double)adc_voltage_raw(ADC_CHANNEL0) / ADC_MAX_READING;
-
-        // If we have a new reading then update the params.
-        if (newReading != reading) {
-            reading = newReading;
-            params.opParams[FM_OPERATOR0].algorithmConnections[FM_OPERATOR1] =
-              reading;
-            FmPlayer_updateSynthParams(&params);
-        }
+        // double newReading =
+        //(double)adc_voltage_raw(ADC_CHANNEL0) / ADC_MAX_READING;
+        //
+        //// If we have a new reading then update the params.
+        // if (newReading != reading) {
+        // reading = newReading;
+        // params.opParams[FM_OPERATOR1].algorithmConnections[FM_OPERATOR2] =
+        // reading;
+        // FmPlayer_updateSynthParams(&params);
+        //}
         _sleepForMs(100); // do it 10 times a sec
     }
 
-    FmPlayer_noteOff();
+    Sequencer_stop();
+
     _sleepForMs(1000); // fadeout!
 
+    Sequencer_destroy();
     FmPlayer_close();
+    return 0;
 }

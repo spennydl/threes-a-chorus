@@ -48,6 +48,8 @@ FmPlayer_noteOff(void);
 void
 FmPlayer_updateSynthParams(FmSynthParams* params);
 
+void
+FmPlayer_setNote(Note note);
 /**
  * @brief Close and tear down the player.
  */

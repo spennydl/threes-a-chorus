@@ -36,7 +36,8 @@ typedef enum
     Gb4,
     G4,
     Ab4,
-    A5
+    A5,
+    NOTE_NONE
 } Note;
 
 /** Operators available. Adding more is as simple as adding more values here. */
@@ -106,7 +107,6 @@ typedef struct
  * Configures OPERATOR0 to output a simple sine wave at A440.
  */
 static const FmSynthParams FM_DEFAULT_PARAMS = {
-    .note = A4,
     .sampleRate = 44100,
     .opParams = { { .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
@@ -117,7 +117,7 @@ static const FmSynthParams FM_DEFAULT_PARAMS = {
                               .releaseMs = 800,
                               .attackPeak = 0.75,
                               .sustainLevel = 0.55 } },
-                  { .waveType = WAVETYPE_SINE,
+                  { .waveType = WAVETYPE_SAW,
                     .CmRatio = 2.0 / 1.0,
                     .algorithmConnections = { 0 },
                     .adsr = { .attackMs = 400,
@@ -141,6 +141,47 @@ static const FmSynthParams FM_DEFAULT_PARAMS = {
                               .decayMs = 100,
                               .releaseMs = 800,
                               .attackPeak = 0.75,
+                              .sustainLevel = 0.55 } } }
+};
+
+static const FmSynthParams FM_BASS_PARAMS = {
+    .sampleRate = 44100,
+    .opParams = { { .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0 / 4,
+                    .outputStrength = 0.6,
+                    .algorithmConnections = { 0.0, 0.0, 0.0, 4 },
+                    .adsr = { .attackMs = 200,
+                              .decayMs = 100,
+                              .releaseMs = 400,
+                              .attackPeak = 0.75,
+                              .sustainLevel = 0.55 } },
+                  { .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0,
+                    .outputStrength = 0.0,
+                    .algorithmConnections = { 0.0, 0.0, 2.4, 0.0 },
+                    .adsr = { .attackMs = 200,
+                              .decayMs = 100,
+                              .releaseMs = 400,
+                              .attackPeak = 0.75,
+                              .sustainLevel = 0.55 } },
+
+                  { .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0 / 4,
+                    .outputStrength = 0,
+                    .algorithmConnections = { 0 },
+                    .adsr = { .attackMs = 200,
+                              .decayMs = 100,
+                              .releaseMs = 400,
+                              .attackPeak = 0.75,
+                              .sustainLevel = 0.55 } },
+                  { .waveType = WAVETYPE_SAW,
+                    .CmRatio = 1.0 / 4,
+                    .outputStrength = 0,
+                    .algorithmConnections = { 0 },
+                    .adsr = { .attackMs = 200,
+                              .decayMs = 100,
+                              .releaseMs = 400,
+                              .attackPeak = 0.5,
                               .sustainLevel = 0.55 } } }
 };
 
@@ -175,6 +216,9 @@ Fm_createFmSynthesizer(const FmSynthParams* params);
  */
 void
 Fm_destroySynthesizer(FmSynthesizer* synth);
+
+void
+Fm_setNote(FmSynthesizer* s, Note note);
 
 /**
  * @brief Trigger the ADSR and start playing the currently configured note.
