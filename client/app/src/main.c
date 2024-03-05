@@ -5,10 +5,12 @@
 #include <stdlib.h>
 
 #include "tcpExample.h"
+#include "ultrasonicExample.h"
 
-int 
-main(int argc, char **argv)
+int
+main(int argc, char** argv)
 {
-    tcpFileExample(argc, argv);
+    (void)argc;
+    (void)argv;
     return 0;
 }
