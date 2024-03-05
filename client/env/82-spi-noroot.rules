@@ -1,0 +1,1 @@
+KERNEL=="spidev*", GROUP="spiusr", MODE="0660"
