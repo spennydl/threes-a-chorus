@@ -109,7 +109,7 @@ Tcp_cleanUpTcpServer()
 ssize_t
 Tcp_sendTcpServerResponse(const char* message, int socketFd)
 {
-    return send(socketFd, message, strlen(message), 0);
+    return send(socketFd, message, MAX_LEN, 0);
 }
 
 ssize_t
