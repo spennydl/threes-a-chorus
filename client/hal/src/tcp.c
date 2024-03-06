@@ -100,15 +100,25 @@ Tcp_requestFile(char* fileName)
     }
 
     int remainingData = fileSize;
-    ssize_t len;
+    
     char buffer[BUFSIZ];
 
-    while((remainingData > 0) && ((len = recv(sockfd, buffer, BUFSIZ, 0)) > 0)) {
-        fwrite(buffer, sizeof(char), len, receivedFile);
-        remainingData -= len;
+    ssize_t len;
 
+    while(remainingData > 0) {
+        len = recv(sockfd, buffer, remainingData < BUFSIZ ? remainingData : BUFSIZ, 0);
+
+        if(len <= 0) {
+            perror("Ran into error while recv file");
+            fclose(receivedFile);
+            return len;
+        }
+
+        fwrite(buffer, sizeof(char), len, receivedFile);
+       
+        remainingData -= len;
         #ifdef DEV
-        printf("%d bytes left\n", remainingData);
+        printf("%d bytes got so %d bytes left\n", len, remainingData);
         #endif
     }
 

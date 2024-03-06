@@ -140,8 +140,16 @@ Tcp_sendFile(char* path, int socketFd)
     int remainingData = fileStat.st_size;
     int sentBytes = -1;
 
-    while(((sentBytes = sendfile(socketFd, fd, &offset, BUFSIZ)) > 0) && (remainingData > 0)) {
+    while(remainingData > 0) {
+        sentBytes = sendfile(socketFd, fd, &offset, remainingData < BUFSIZ ? remainingData : BUFSIZ);
+
+        if(sentBytes <= 0) {
+            perror("Error while sending file");
+            break;
+        }
+
         remainingData -= sentBytes;
+        printf("%d bytes sent. %d remaining bytes\n", sentBytes, remainingData);
     }
 
     close(fd);
