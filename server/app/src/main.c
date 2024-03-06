@@ -16,11 +16,19 @@ onMessageRecieved(void* instance, const char* newMessage, int socketFd)
     // Not using instance so just casting it to null in this example to get rid of warnings that it isn't used
     // If you know how to make it stop a better way please tell me!
     (void)instance;
-    
-    printf("Got: %s. Echoing!\n", newMessage);
 
-    ssize_t res = Tcp_sendTcpServerResponse(newMessage, socketFd);
-    printf("Code from echo: %ld\n", res);
+    if(strcmp(newMessage, SEND_FILE) != 0) {
+        printf("Got: %s. Echoing!\n", newMessage);
+        ssize_t res = Tcp_sendTcpServerResponse(newMessage, socketFd);
+        printf("Code from echo: %ld\n", res);
+    }
+    else {
+        printf("Got: %s. Sending file!\n", newMessage);
+
+        ssize_t res = Tcp_sendFile("stillalive.midi", socketFd);
+        printf("Code from file sending: %ld\n", res);
+    }
+   
 }
 
 int

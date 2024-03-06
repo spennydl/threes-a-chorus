@@ -10,9 +10,6 @@
 int
 main(int argc, char** argv)
 {
-    (void)argc;
-    (void)argv;
-    // tcpExample(argc, argv);
-    ultrasonicExample();
+    tcpFileExample(argc, argv);
     return 0;
 }
