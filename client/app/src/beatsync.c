@@ -35,12 +35,17 @@ void*
 beatRequesterWorker(void* p)
 {
     (void)p;
+    char res[MAX_BUFFER_SIZE] = {0};
+    long msToSleep;
 
     while(running) {
-        char res[MAX_BUFFER_SIZE] = {0};
+        memset(res, 0, MAX_BUFFER_SIZE);
         Tcp_makeServerRequest(BEAT_CODE, res);
-        printf("bpm: %s\n", res);
-        Timeutils_sleepForMs(1000);
+        msToSleep = strtol(res, NULL, 10);
+        //printf("ms to sleep: %s > %ld\n", res, msToSleep);
+        Timeutils_sleepForMs(msToSleep);
+        
+        printf("Beat!\n");
     }
 
     return NULL;
