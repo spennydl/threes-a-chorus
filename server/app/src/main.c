@@ -17,16 +17,20 @@ onMessageRecieved(void* instance, const char* newMessage, int socketFd)
     // If you know how to make it stop a better way please tell me!
     (void)instance;
 
-    if(strcmp(newMessage, SEND_FILE) != 0) {
+    if(strcmp(newMessage, SEND_FILE) == 0) {
+        printf("Got: %s. Sending file!\n", newMessage);
+        ssize_t res = Tcp_sendFile("stillalive.midi", socketFd);
+        printf("Code from file sending: %ld\n", res);
+    }
+    if(strcmp(newMessage, BEAT_CODE) == 0) {
+        printf("Got: %s. \n", newMessage);
+        ssize_t res = Tcp_sendTcpServerResponse("120", socketFd);
+        printf("Code from res: %ld\n", res);
+    }
+    else {
         printf("Got: %s. Echoing!\n", newMessage);
         ssize_t res = Tcp_sendTcpServerResponse(newMessage, socketFd);
         printf("Code from echo: %ld\n", res);
-    }
-    else {
-        printf("Got: %s. Sending file!\n", newMessage);
-
-        ssize_t res = Tcp_sendFile("stillalive.midi", socketFd);
-        printf("Code from file sending: %ld\n", res);
     }
    
 }

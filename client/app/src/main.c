@@ -4,12 +4,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "tcpExample.h"
-#include "ultrasonicExample.h"
+#include "hal/tcp.h"
+#include "beatsync.h"
 
 int
 main(int argc, char** argv)
 {
-    tcpFileExample(argc, argv);
+    if(argc < 2) {
+        printf("Need more args\n");
+        return 0;
+    }
+
+    Tcp_initializeTcpClient(argv[1]);
+    BeatSync_initialize();
+
+    while(1) {
+
+    }
+
+    BeatSync_cleanup();
+    Tcp_cleanupTcpClient();
+
     return 0;
 }
