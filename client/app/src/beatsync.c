@@ -11,23 +11,19 @@
 
 static bool running = false;
 
-static pthread_t beatSyncThread;
 static pthread_t beatRequestThread;
 
 void
 BeatSync_initialize()
 {
     running = true;
-    (void)beatSyncWorker;
     (void)beatRequesterWorker;
     pthread_create(&beatRequestThread, NULL, &beatRequesterWorker, NULL);
-    pthread_create(&beatSyncThread, NULL, &beatSyncWorker, NULL);
 }
 
 void BeatSync_cleanup()
 {
     running = false;
-    pthread_join(beatSyncThread, NULL);
     pthread_join(beatRequestThread, NULL);
 }
 
@@ -42,22 +38,11 @@ beatRequesterWorker(void* p)
         memset(res, 0, MAX_BUFFER_SIZE);
         Tcp_makeServerRequest(BEAT_CODE, res);
         msToSleep = strtol(res, NULL, 10);
-        //printf("ms to sleep: %s > %ld\n", res, msToSleep);
         Timeutils_sleepForMs(msToSleep);
         
-        printf("Beat!\n");
-    }
-
-    return NULL;
-}
-
-void*
-beatSyncWorker(void* p)
-{
-    (void)p;
-
-    while(running) {
-        
+        printf("Slept for %ldms but now ...Beat!\n", msToSleep);
+        // TODO make sound here. If we need granularity of more than a quarter note
+        // We should do those calculations locally I think...
     }
 
     return NULL;

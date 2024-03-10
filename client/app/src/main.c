@@ -11,7 +11,7 @@ int
 main(int argc, char** argv)
 {
     if(argc < 2) {
-        printf("Need more args\n");
+        printf("You must specify the server ip (192.168.7.1)\n");
         return 0;
     }
 
@@ -19,7 +19,7 @@ main(int argc, char** argv)
     BeatSync_initialize();
 
     while(1) {
-
+        // Just chill man. No way to gracefully shutdown yet :D
     }
 
     BeatSync_cleanup();
