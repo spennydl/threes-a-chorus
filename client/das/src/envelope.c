@@ -8,122 +8,81 @@
  */
 #include "das/envelope.h"
 
-/** Transitions */
-static void
-_adsrTransitionAttack(AdsrEnvelope* adsr)
-{
-    // depending on the state and time, we need a linear step that will
-    // get us to the target level in the target time.
-    adsr->envelope = 0.0;
-    double samplesToTarget = adsr->updatesPerSec * (adsr->attackMs / 1000.0);
-    // TODO: precision is gonna be awful here.
-    adsr->step = adsr->attackPeak / samplesToTarget;
-    adsr->state = ATTACK;
-}
+#define ENV_TRIGGER_BIT (0x1)
+#define ENV_GATE_BIT (0x2)
 
-static void
-_adsrTransitionDecay(AdsrEnvelope* adsr)
+float
+Env_pwlSample(Env_PiecewiseLinearFn* pwl, float samplePoint)
 {
-    // we're assuming we're at the attack peak here
-    double samplesToTarget = adsr->updatesPerSec * (adsr->decayMs / 1000.0);
-    // TODO: precision is gonna be awful here.
-    // Note that this could decay "upwards" if we start below sustain
-    adsr->step = -1 * (adsr->attackPeak - adsr->sustainLevel) / samplesToTarget;
-    adsr->state = DECAY;
-}
+    int i;
+    float x0 = 0;
+    float x1 = 0;
+    float y0 = 0;
+    float y1 = 0;
 
-static void
-_adsrTransitionSustain(AdsrEnvelope* adsr)
-{
-    adsr->step = 0.0;
-    adsr->envelope = adsr->sustainLevel;
-    adsr->state = SUSTAIN;
-}
-
-static void
-_adsrTransitionOff(AdsrEnvelope* adsr)
-{
-    adsr->step = 0.0;
-    adsr->envelope = 0.0;
-    adsr->state = ADSR_OFF;
-}
-
-static void
-_adsrTransitionRelease(AdsrEnvelope* adsr)
-{
-    // depending on the state and time, we need a linear step that will
-    // get us to the target level in the target time.
-    double samplesToTarget = adsr->updatesPerSec * (adsr->releaseMs / 1000.0);
-    // TODO: precision could be awful here, but it might not matter
-    adsr->step = -1 * adsr->envelope / samplesToTarget;
-    adsr->state = RELEASE;
-}
-
-static void
-_adsrTransitionIfNeeded(AdsrEnvelope* adsr)
-{
-    switch (adsr->state) {
-        case ATTACK: {
-            if (adsr->envelope >= adsr->attackPeak) {
-                _adsrTransitionDecay(adsr);
-            }
-            break;
-        }
-        case DECAY: {
-            if (adsr->envelope <= adsr->sustainLevel) { // TODO: assumption!
-                _adsrTransitionSustain(adsr);
-            }
-            break;
-        }
-        case RELEASE: {
-            if (adsr->envelope <= 0) {
-                _adsrTransitionOff(adsr);
-            }
-            break;
-        }
-        default: {
-            // Transitions to attack and sustain must be manually triggered
-            // using Env_adsrTrigger and Env_adsrGate.
+    // fprintf(stderr, "we have %u pts\n", pwl->pts);
+    for (i = 0; i < pwl->pts - 1; i++) {
+        // printf("yesp\n");
+        if (pwl->ptsX[i] <= samplePoint && pwl->ptsX[i + 1] > samplePoint) {
+            x0 = pwl->ptsX[i];
+            x1 = pwl->ptsX[i + 1];
+            y0 = pwl->ptsY[i];
+            y1 = pwl->ptsY[i + 1];
             break;
         }
     }
+
+    float sample = ((samplePoint - x0) / (x1 - x0)) * (y1 - y0) + y0;
+    return sample;
 }
 
 void
-Env_adsrInit(AdsrEnvelope* adsr, size_t updatesPerSec, size_t sampleRate)
+Env_initEnvelope(Env_Envelope* env, size_t sampleRate)
 {
-    adsr->updatesPerSec = (sampleRate / updatesPerSec);
-    adsr->state = ADSR_OFF;
-    adsr->step = 0.0;
-    adsr->envelope = 0.0;
+    float samplesPerMs = sampleRate * 0.001;
+    float samplesPerEnv = env->lengthMs * samplesPerMs;
+    env->step = 1.0 / samplesPerEnv;
+    env->current = 0;
+    env->state = 0;
+}
 
-    // Enforce that the attack goes at least as high as the sustain level.
-    if (adsr->attackPeak < adsr->sustainLevel) {
-        adsr->attackPeak = adsr->sustainLevel;
+float
+Env_getValueAndAdvance(Env_Envelope* env)
+{
+    float value = 0;
+    if (env->state & ENV_TRIGGER_BIT) {
+        float x = env->current;
+        value = Env_pwlSample(&env->fn, x);
+
+        x += env->step;
+
+        if (x >= env->gatePoint) {
+            if (env->repeatPoint >= 0) {
+                x = env->repeatPoint;
+            } else if (!(env->state & ENV_GATE_BIT)) {
+                x = env->gatePoint;
+            }
+        }
+
+        if (x > 1) {
+            env->state = 0;
+            x = 0;
+        }
+
+        env->current = x;
     }
-}
-
-double
-Env_adsrUpdate(AdsrEnvelope* adsr)
-{
-    double ret = 0.0;
-    if (adsr->state != ADSR_OFF) {
-        ret = adsr->envelope;
-        adsr->envelope += adsr->step;
-        _adsrTransitionIfNeeded(adsr);
-    }
-
-    return ret;
+    return value;
 }
 
 void
-Env_adsrTrigger(AdsrEnvelope* adsr)
+Env_trigger(Env_Envelope* env)
 {
-    _adsrTransitionAttack(adsr);
+    env->current = 0;
+    env->state = ENV_TRIGGER_BIT;
 }
 
 void
-Env_adsrGate(AdsrEnvelope* adsr)
+Env_gate(Env_Envelope* env)
 {
-    _adsrTransitionRelease(adsr);
+    env->state |= ENV_GATE_BIT;
 }

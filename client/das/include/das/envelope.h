@@ -46,79 +46,91 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdint.h>
 
-/**
- * @brief Current state of the envelope, i.e. which "phase" it's in.
- */
-typedef enum
-{
-    ATTACK,
-    DECAY,
-    SUSTAIN,
-    RELEASE,
-    ADSR_OFF
-} _AdsrState;
+#define ENV_ADSR_PLUCK_FUNCTION                                                \
+    {                                                                          \
+        .ptsX = { 0.0, 0.1, 0.15, 0.65, 1.0 },                                 \
+        .ptsY = { 0.0, 0.75, 0.55, 0.55, 0.0 }, .pts = 5                       \
+    }
 
-/**
- * @brief ADSR data.
- */
+#define ENV_ADSR_AHH_FUNCTION                                                  \
+    {                                                                          \
+        .ptsX = { 0.0, 0.25, 0.35, 0.75, 1.0 },                                \
+        .ptsY = { 0.0, 0.6, 0.55, 0.55, 0.0 }, .pts = 5                        \
+    }
+
+#define ENV_SWELL_FUNCTION                                                     \
+    {                                                                          \
+        .ptsX = { 0.0, 0.5, 1.0 }, .ptsY = { 0.0, 1.0, 0.0 }, .pts = 3         \
+    }
+
+#define ENV_EXP_FALLOFF_FUNCTION                                               \
+    {                                                                          \
+        .ptsX = { 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 }, .ptsY = { 1.0,               \
+                                                            0.201896517994655, \
+                                                            0.040762203978366, \
+                                                            0.008229747049020, \
+                                                            0.001661557273174, \
+                                                            0.0 },             \
+        .pts = 6                                                               \
+    }
+
+#define ENV_CONST_FUNCTION                                                     \
+    {                                                                          \
+        .ptsX = { 0.0, 1.0 }, .ptsY = { 0.6, 0.6 }, .pts = 2                   \
+    }
+
+#define ENV_PEAKFALL_FUNCTION                                                  \
+    {                                                                          \
+        .ptsX = { 0.0, 0.1, 0.2, 0.3, 1.0 },                                   \
+        .ptsY = { 0.0, 0.1, 0.18, 0.0, 0.0 }, .pts = 5                         \
+    }
+
+#define ENV_LINEARFALL_FUNCTION                                                \
+    {                                                                          \
+        .ptsX = { 0.0, 1.0 }, .ptsY = { 1.0, 0.0 }, .pts = 2                   \
+    }
+
+#define ENV_LINEARRAMP_FUNCTION                                                \
+    {                                                                          \
+        .ptsX = { 0.0, 1.0 }, .ptsY = { 0.0, 1.0 }, .pts = 2                   \
+    }
+
+#define ENV_BELLSTRIKE_FUNCTION                                                \
+    {                                                                          \
+        .ptsX = { 0.0, 0.25, 0.75, 1.0 }, .ptsY = { 0.6, 0.35, 0.35, 0.0 },    \
+        .pts = 4                                                               \
+    }
+
 typedef struct
 {
-    size_t attackMs;
-    size_t decayMs;
-    size_t releaseMs;
-    double sustainLevel;
-    double attackPeak;
+    float ptsX[6];
+    float ptsY[6];
+    int pts;
+} Env_PiecewiseLinearFn;
 
-    double step;
-    double envelope;
-    size_t updatesPerSec;
+typedef struct
+{
+    float step;
+    float current;
+    float gatePoint;
+    float repeatPoint;
+    long lengthMs;
 
-    _AdsrState state;
-} AdsrEnvelope;
+    Env_PiecewiseLinearFn fn;
 
-/**
- * @brief Prepares the ADSR for use.
- *
- * The ADSR struct passed to this function should have the attackMs, decayMs,
- * releaseMs, sustainLevel, and attackPeak parameters set on it. This function
- * prepares the internal data required to run the ADSR envelope.
- *
- * @param adsr The ADSR to initialize.
- * @param updatesPerSecond How many times per second this envelope will be
- * undated.
- * @param sampleRate The sample rate of the synthesizer..
- */
+    uint8_t state;
+} Env_Envelope;
+
 void
-Env_adsrInit(AdsrEnvelope* adsr, size_t updatesPerSecond, size_t sampleRate);
+Env_initEnvelope(Env_Envelope* env, size_t sampleRate);
 
-/**
- * @brief Update the ADSR and get the current envelope value.
- *
- * Advances the ADSR envelope and returns the loudness.
- *
- * @param adsr The envelope to update.
- * @return double The current envelope value in [0.0, 1.0].
- */
-double
-Env_adsrUpdate(AdsrEnvelope* adsr);
+float
+Env_getValueAndAdvance(Env_Envelope* env);
 
-/**
- * @brief Trigger the envelope.
- *
- * Puts the ADSR in ATTACK state and sets the envelope to 0. This corresponds to
- * the state at the beginning of a note.
- * @param adsr The adsr.
- */
 void
-Env_adsrTrigger(AdsrEnvelope* adsr);
+Env_trigger(Env_Envelope* env);
 
-/**
- * @brief Gate the ADSR.
- *
- * Puts the ADSR in the RELEASE phase and updates the step to the falloff rate.
- *
- * @param adsr The ADSR to gate.
- */
 void
-Env_adsrGate(AdsrEnvelope* adsr);
+Env_gate(Env_Envelope* env);

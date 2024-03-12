@@ -26,7 +26,7 @@
  * @return 1 on success, negative on failure.
  */
 int
-FmPlayer_initialize(FmSynthParams* params);
+FmPlayer_initialize(const FmSynthParams* params);
 
 /**
  * @brief Send a noteOn to the synthesizer.
@@ -46,7 +46,7 @@ FmPlayer_noteOff(void);
  * @param params The parameters to update.
  */
 void
-FmPlayer_updateSynthParams(FmSynthParams* params);
+FmPlayer_updateSynthParams(const FmSynthParams* params);
 
 void
 FmPlayer_setNote(Note note);

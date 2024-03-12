@@ -11,8 +11,8 @@
 #define BPM_TO_NS(B) (NS_IN_MINUTE / (B) / SEQ_SIXTEENTH_NOTE_IN_QUARTER_NOTE)
 
 #define SEQ_SLOT_IDX(Q, E, S)                                                  \
-    (((Q)*SEQ_SIXTEENTH_NOTE_IN_QUARTER_NOTE) +                                \
-     ((E)*SEQ_EIGHTH_NOTE_IN_QUARTER_NOTE) + (S))
+    (((Q) * SEQ_SIXTEENTH_NOTE_IN_QUARTER_NOTE) +                              \
+     ((E) * SEQ_EIGHTH_NOTE_IN_QUARTER_NOTE) + (S))
 
 #define NS_IN_MINUTE 60000000000
 
@@ -119,13 +119,12 @@ static void
 _runSequencerSlot(SequencerIdx idx)
 {
     SequencerOp* op = &seq->sequence[idx];
-    if (op->note != NOTE_NONE) {
-        fprintf(stderr, "SET NOTE TO %d\n", op->note);
-        FmPlayer_setNote(op->note);
-    }
-
     if (op->synthParams != NULL) {
         FmPlayer_updateSynthParams(op->synthParams);
+    }
+
+    if (op->note != NOTE_NONE) {
+        FmPlayer_setNote(op->note);
     }
 
     if (op->op == SEQ_NOTE_ON) {
@@ -190,7 +189,7 @@ _sequencer(void* _data)
             }
             case SEQ_RESET: {
                 seq->playbackPosition = 0;
-                state = SEQ_RUN;
+                _sequencerState = SEQ_RUN;
                 break;
             }
             case SEQ_END: {
@@ -224,6 +223,7 @@ void
 Sequencer_reset(void)
 {
     _sequencerState = SEQ_RESET;
+    pthread_cond_signal(&_stateCond);
 }
 
 void

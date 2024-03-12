@@ -1,5 +1,4 @@
 #include "das/fmplayer.h"
-#include "das/cbuffer.h"
 #include "das/fm.h"
 #include <alsa/asoundlib.h>
 #include <alsa/pcm.h>
@@ -12,7 +11,7 @@
  * the hardware buffer in microseconds. Setting to 0.05 seconds currently gives
  * a period of about 735 samples, which means we will have very low latency
  * (0.05 seconds is great), but will require more CPU time to keep up. */
-#define ALSA_BUFFERTIME 50000
+#define ALSA_BUFFERTIME 64000
 
 typedef struct
 {
@@ -66,8 +65,25 @@ _play(void* arg)
 
     while (_fmPlayer->running) {
         // set synth params if we need to
+        //
+        // TODO: This is bad bad not good.
+        //
+        // There's a race condition where if we update synth params and then
+        // call noteOn/noteOff the noteOn/noteOff will get clobbered by the
+        // params update.
+        //
+        // We can'd do like we do with `setNote` and `updateSynthParams` because
+        // we need at least noteOn and noteOff to happen immediately. This also
+        // needs to be fast, and I don't know that we can get away with any sort
+        // of locking overhead when we have to generate 44100 samples every
+        // second.
+        //
+        // Parameter updating has been the biggest weakpoint in the synth design
+        // so far. It needs a complete rethink, but I don't know that we have
+        // the time for it now :(
         if (_fmPlayer->update) {
             Fm_updateParams(_fmPlayer->synth, &_fmPlayer->params);
+            _fmPlayer->update = 0;
         }
 
         if (_fmPlayer->note != NOTE_NONE) {
@@ -172,7 +188,7 @@ _setHwparams(snd_pcm_t* handle, snd_pcm_hw_params_t* params)
 
     /* Configure the buffer size. We want the buffer to be 2 periods long. */
     unsigned int buftime = ALSA_BUFFERTIME;
-    int dir;
+    int dir = 0;
     err =
       snd_pcm_hw_params_set_buffer_time_near(handle, params, &buftime, &dir);
     if (err < 0) {
@@ -186,7 +202,8 @@ _setHwparams(snd_pcm_t* handle, snd_pcm_hw_params_t* params)
         printf("err getting buffer size size: %s\n", snd_strerror(err));
         return err;
     } else {
-        printf("Buffer size is %lu\n", _fmPlayer->bufferSize);
+        printf(
+          "Buffer size is %lu and dir is %d\n", _fmPlayer->bufferSize, dir);
     }
 
     /* Alsa divides its buffers into "periods", and does stuff when playback
@@ -195,10 +212,13 @@ _setHwparams(snd_pcm_t* handle, snd_pcm_hw_params_t* params)
      * To keep latency low low low, we wanna use 2 periods. Alsa can then do
      * whatever it's gotta with the data in one period while we're writing to
      * the other. */
-    unsigned int period = buftime / 2;
-    err = snd_pcm_hw_params_set_period_time_near(handle, params, &period, &dir);
+    snd_pcm_uframes_t period = _fmPlayer->bufferSize / 2;
+    dir = 0;
+    printf("Trying to set period size to %lu\n", period);
+    err = snd_pcm_hw_params_set_period_size_near(handle, params, &period, &dir);
     if (err < 0) {
-        printf("Unable to set period time %u: %s\n", period, snd_strerror(err));
+        printf(
+          "Unable to set period size %lu: %s\n", period, snd_strerror(err));
         return err;
     }
 
@@ -318,7 +338,6 @@ FmPlayer_setNote(Note note)
     _fmPlayer->note = note;
 }
 
-// TODO a better interface
 void
 FmPlayer_noteOn(void)
 {
@@ -332,14 +351,14 @@ FmPlayer_noteOff(void)
 }
 
 void
-FmPlayer_updateSynthParams(FmSynthParams* params)
+FmPlayer_updateSynthParams(const FmSynthParams* params)
 {
     memcpy(&_fmPlayer->params, params, sizeof(FmSynthParams));
     _fmPlayer->update = 1;
 }
 
 int
-FmPlayer_initialize(FmSynthParams* params)
+FmPlayer_initialize(const FmSynthParams* params)
 {
     _fmPlayer = malloc(sizeof(_FmPlayer));
     memset(_fmPlayer, 0, sizeof(_FmPlayer));
