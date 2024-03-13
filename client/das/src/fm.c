@@ -41,10 +41,6 @@ typedef struct
     // Everything else is configuration and control
     /** Synthesizer sample rate. */
     size_t sampleRate;
-    /** Was a trigger requested? */
-    _Atomic int needTrigger;
-    /** Was a gate requested? */
-    _Atomic int needGate;
 
     /** The note we are playing. */
     Note note;
@@ -71,6 +67,9 @@ _updateAllOperatorFreq(_FmSynth* synth);
 /** Apply the paramters to the synthesizer.*/
 static void
 _configure(_FmSynth* synth, const FmSynthParams* params, bool initialize);
+/** Set params for one operator */
+static void
+_setOpParams(_FmSynth* synth, FmOperator op, const OperatorParams* params);
 /** Allocate a new _FmSynth. */
 static _FmSynth*
 _fmSynthAlloc(void);
@@ -133,23 +132,39 @@ _configure(_FmSynth* synth, const FmSynthParams* params, bool initialize)
 
         for (int op = 0; op < FM_OPERATORS; op++) {
             const OperatorParams* opParams = &params->opParams[op];
-            synth->opWave[op] = opParams->waveType;
 
-            _setOperatorCM(synth, op, opParams->CmRatio, opParams->fixToNote);
-            synth->opOutput[op] = opParams->outputStrength;
+            _setOpParams(synth, op, opParams);
 
             // TODO: this sucks
-            memcpy(&synth->opAdsr[op], &opParams->env, sizeof(Env_Envelope));
-            Env_initEnvelope(&synth->opAdsr[op],
-                             synth->sampleRate / ADSR_UPDATES_PER_SEC);
+            memcpy(&synth->opAdsr[op],
+                   &params->opEnvelopes[op],
+                   sizeof(Env_Envelope));
 
-            int modByIdx = op * FM_OPERATORS;
-            for (int modOp = 0; modOp < FM_OPERATORS; modOp++) {
-                synth->opModBy[modByIdx + modOp] =
-                  opParams->algorithmConnections[modOp];
-            }
+            Env_prepareEnvelope(&synth->opAdsr[op],
+                                synth->sampleRate / ADSR_UPDATES_PER_SEC);
         }
     }
+}
+
+static void
+_setOpParams(_FmSynth* synth, FmOperator op, const OperatorParams* params)
+{
+    synth->opWave[op] = params->waveType;
+    synth->opOutput[op] = params->outputStrength;
+
+    _setOperatorCM(synth, op, params->CmRatio, params->fixToNote);
+
+    int modByIdx = op * FM_OPERATORS;
+    for (int modOp = 0; modOp < FM_OPERATORS; modOp++) {
+        synth->opModBy[modByIdx + modOp] = params->algorithmConnections[modOp];
+    }
+}
+
+void
+Fm_updateOpParams(FmSynthesizer* s, FmOperator op, const OperatorParams* params)
+{
+    _FmSynth* synth = s->__FmSynth;
+    _setOpParams(synth, op, params);
 }
 
 void
@@ -237,8 +252,6 @@ Fm_createFmSynthesizer(const FmSynthParams* params)
         free(synth);
         return NULL;
     }
-    synth->needTrigger = 0;
-    synth->needGate = 0;
     fmSynth->__FmSynth = synth;
 
     _configure(synth, params, true);
@@ -261,14 +274,14 @@ void
 Fm_noteOn(FmSynthesizer* s)
 {
     _FmSynth* synth = s->__FmSynth;
-    synth->needTrigger = 1;
+    _noteOn(synth);
 }
 
 void
 Fm_noteOff(FmSynthesizer* s)
 {
     _FmSynth* synth = s->__FmSynth;
-    synth->needGate = 1;
+    _noteOff(synth);
 }
 
 void
@@ -312,17 +325,6 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
 
         // If we need to, update the ADSR envelope and triggers.
         if (s % ADSR_UPDATES_PER_SEC == 0) {
-            // TODO: Maybe there is a better and faster solution for this?
-            // Do the trigger first so that if we are in an invalid state where
-            // both trigger and gate are set then we can default to off.
-            if (synth->needTrigger) {
-                _noteOn(synth);
-                synth->needTrigger = 0;
-            }
-            if (synth->needGate) {
-                _noteOff(synth);
-                synth->needGate = 0;
-            }
             for (int op = 0; op < FM_OPERATORS; op++) {
                 synth->opEnvelope[op] =
                   Env_getValueAndAdvance(&synth->opAdsr[op]);

@@ -1,5 +1,6 @@
 #include "das/fmplayer.h"
 #include "das/fm.h"
+#include "das/wavetable.h"
 #include <alsa/asoundlib.h>
 #include <alsa/pcm.h>
 #include <asm-generic/errno-base.h>
@@ -13,12 +14,15 @@
  * (0.05 seconds is great), but will require more CPU time to keep up. */
 #define ALSA_BUFFERTIME 64000
 
+#define UPDATE_NEEDED_BIT 0x1
+#define UPDATE_VOICE_BIT (0x1 << FM_OPERATORS)
+
 typedef struct
 {
-    _Atomic int running;
-    _Atomic int update;
-
-    pthread_t playerThread;
+    Note note;
+    FmPlayer_NoteCtrl ctrl;
+    int running;
+    int updatesNeeded;
 
     int16_t* sampleBuffer;
 
@@ -27,8 +31,14 @@ typedef struct
     snd_pcm_uframes_t periodSize;
     FmSynthesizer* synth;
 
+    pthread_t playerThread;
+    // Lock for updates to the synth params.
+    // We only lock updates to the params, not the note or note control.
+    // Updating the note or note control will be atomic since they are both
+    // 32-bit ints and should be aligned.
+    pthread_rwlock_t updateRwLock;
+
     FmSynthParams params;
-    Note note;
 } _FmPlayer;
 
 static _FmPlayer* _fmPlayer;
@@ -65,30 +75,39 @@ _play(void* arg)
 
     while (_fmPlayer->running) {
         // set synth params if we need to
-        //
-        // TODO: This is bad bad not good.
-        //
-        // There's a race condition where if we update synth params and then
-        // call noteOn/noteOff the noteOn/noteOff will get clobbered by the
-        // params update.
-        //
-        // We can'd do like we do with `setNote` and `updateSynthParams` because
-        // we need at least noteOn and noteOff to happen immediately. This also
-        // needs to be fast, and I don't know that we can get away with any sort
-        // of locking overhead when we have to generate 44100 samples every
-        // second.
-        //
-        // Parameter updating has been the biggest weakpoint in the synth design
-        // so far. It needs a complete rethink, but I don't know that we have
-        // the time for it now :(
-        if (_fmPlayer->update) {
+        pthread_rwlock_rdlock(&_fmPlayer->updateRwLock);
+        if (_fmPlayer->updatesNeeded & UPDATE_VOICE_BIT) {
             Fm_updateParams(_fmPlayer->synth, &_fmPlayer->params);
-            _fmPlayer->update = 0;
         }
 
+        // apply any pending operator updates
+        for (int op = 0; op < FM_OPERATORS; op++) {
+            if (_fmPlayer->updatesNeeded & (UPDATE_NEEDED_BIT << op)) {
+                Fm_updateOpParams(
+                  _fmPlayer->synth, op, &_fmPlayer->params.opParams[op]);
+            }
+        }
+        _fmPlayer->updatesNeeded = 0;
+        pthread_rwlock_unlock(&_fmPlayer->updateRwLock);
+
+        // apply pending note update
         if (_fmPlayer->note != NOTE_NONE) {
             Fm_setNote(_fmPlayer->synth, _fmPlayer->note);
             _fmPlayer->note = NOTE_NONE;
+        }
+
+        // trigger or gate a note
+        if (_fmPlayer->ctrl != NOTE_CTRL_NONE) {
+            if (_fmPlayer->ctrl == NOTE_CTRL_NOTE_STOCCATO ||
+                _fmPlayer->ctrl == NOTE_CTRL_NOTE_ON) {
+                Fm_noteOn(_fmPlayer->synth);
+            }
+
+            if (_fmPlayer->ctrl == NOTE_CTRL_NOTE_STOCCATO ||
+                _fmPlayer->ctrl == NOTE_CTRL_NOTE_OFF) {
+                Fm_noteOff(_fmPlayer->synth);
+            }
+            _fmPlayer->ctrl = NOTE_CTRL_NONE;
         }
 
         // wait for a period to become available.
@@ -339,22 +358,80 @@ FmPlayer_setNote(Note note)
 }
 
 void
-FmPlayer_noteOn(void)
+FmPlayer_controlNote(FmPlayer_NoteCtrl ctrl)
 {
-    Fm_noteOn(_fmPlayer->synth);
+    _fmPlayer->ctrl = ctrl;
 }
 
 void
-FmPlayer_noteOff(void)
+FmPlayer_setSynthVoice(const FmSynthParams* newVoice)
 {
-    Fm_noteOff(_fmPlayer->synth);
+    pthread_rwlock_wrlock(&_fmPlayer->updateRwLock);
+    memcpy(&_fmPlayer->params, newVoice, sizeof(FmSynthParams));
+
+    // Set update voice bit and clear operator update bits as those updates are
+    // now invalid
+    _fmPlayer->updatesNeeded = UPDATE_VOICE_BIT;
+
+    pthread_rwlock_unlock(&_fmPlayer->updateRwLock);
 }
 
 void
-FmPlayer_updateSynthParams(const FmSynthParams* params)
+FmPlayer_updateOperatorWaveType(FmOperator op, WaveType wave)
 {
-    memcpy(&_fmPlayer->params, params, sizeof(FmSynthParams));
-    _fmPlayer->update = 1;
+    pthread_rwlock_wrlock(&_fmPlayer->updateRwLock);
+
+    _fmPlayer->params.opParams[op].waveType = wave;
+    _fmPlayer->updatesNeeded |= (UPDATE_NEEDED_BIT << op);
+
+    pthread_rwlock_unlock(&_fmPlayer->updateRwLock);
+}
+
+void
+FmPlayer_updateOperatorCm(FmOperator op, float cm)
+{
+    pthread_rwlock_wrlock(&_fmPlayer->updateRwLock);
+
+    _fmPlayer->params.opParams[op].CmRatio = cm;
+    _fmPlayer->updatesNeeded |= (UPDATE_NEEDED_BIT << op);
+
+    pthread_rwlock_unlock(&_fmPlayer->updateRwLock);
+}
+
+void
+FmPlayer_updateOperatorOutputStrength(FmOperator op, float outStrength)
+{
+    pthread_rwlock_wrlock(&_fmPlayer->updateRwLock);
+
+    _fmPlayer->params.opParams[op].outputStrength = outStrength;
+    _fmPlayer->updatesNeeded |= (UPDATE_NEEDED_BIT << op);
+
+    pthread_rwlock_unlock(&_fmPlayer->updateRwLock);
+}
+
+void
+FmPlayer_fixOperatorToNote(FmOperator op, Note note)
+{
+    pthread_rwlock_wrlock(&_fmPlayer->updateRwLock);
+
+    _fmPlayer->params.opParams[op].CmRatio = -1;
+    _fmPlayer->params.opParams[op].fixToNote = note;
+    _fmPlayer->updatesNeeded |= (UPDATE_NEEDED_BIT << op);
+
+    pthread_rwlock_unlock(&_fmPlayer->updateRwLock);
+}
+
+void
+FmPlayer_updateOperatorAlgorithmConnection(FmOperator op,
+                                           FmOperator moddingOp,
+                                           float modIndex)
+{
+    pthread_rwlock_wrlock(&_fmPlayer->updateRwLock);
+
+    _fmPlayer->params.opParams[op].algorithmConnections[moddingOp] = modIndex;
+    _fmPlayer->updatesNeeded |= (UPDATE_NEEDED_BIT << op);
+
+    pthread_rwlock_unlock(&_fmPlayer->updateRwLock);
 }
 
 int
@@ -389,7 +466,7 @@ FmPlayer_initialize(const FmSynthParams* params)
     // Buffer a single period at a time
     _fmPlayer->sampleBuffer = malloc(_fmPlayer->bufferSize * sizeof(int16_t));
 
-    // start threads
+    pthread_rwlock_init(&_fmPlayer->updateRwLock, NULL);
     pthread_create(&_fmPlayer->playerThread, NULL, _play, NULL);
 
     return 1;
@@ -400,6 +477,7 @@ FmPlayer_close(void)
 {
     _fmPlayer->running = 0;
     pthread_join(_fmPlayer->playerThread, NULL);
+    pthread_rwlock_destroy(&_fmPlayer->updateRwLock);
 
     Fm_destroySynthesizer(_fmPlayer->synth);
 

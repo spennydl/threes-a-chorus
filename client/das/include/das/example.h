@@ -28,136 +28,136 @@ _sleepForMs(long long delayInMs)
 
 typedef struct
 {
-    SequencerControl ctrl;
+    FmPlayer_NoteCtrl ctrl;
     Note note;
 } SequencerNote;
 
 #define SEQ_LEN (8 * 4)
 
 const SequencerNote NOISY_SONG[SEQ_LEN] = {
-    { .ctrl = SEQ_NOTE_ON, .note = A2 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_ON, .note = A2 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 };
 
 const SequencerNote BELL_SONG[SEQ_LEN] = {
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = A4 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = A4 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = C5 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = C5 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = D5 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = D5 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = Eb5 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = E5 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = Eb5 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = E5 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = E5 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = E5 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = G5 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = G5 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = E5 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = D5 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = E5 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = D5 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = G4 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = G4 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 };
 
 const SequencerNote BASS_SONG[SEQ_LEN] = {
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = A2 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = A2 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = C3 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = C3 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = D3 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = D3 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = Eb3 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = E3 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = Eb3 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = E3 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = E3 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = E3 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = G3 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = G3 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = E3 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = D3 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = E3 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = D3 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 
-    { .ctrl = SEQ_NOTE_STOCCATO, .note = G2 },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
-    { .ctrl = SEQ_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NOTE_STOCCATO, .note = G2 },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
+    { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 };
 
 typedef struct
@@ -212,6 +212,8 @@ example(void)
     size_t n_songs = 7;
     size_t n_drones = 3;
     int quit = 0;
+    double voltReading = 0;
+    double op0Cm = 1.0;
 
     FmPlayer_initialize(songs[song_idx].voice);
 
@@ -231,11 +233,12 @@ example(void)
             _sleepForMs(1000); // let the note ring out a bit
 
             _sequence(songs[song_idx].notes);
-            FmPlayer_updateSynthParams(songs[song_idx].voice);
+            FmPlayer_setSynthVoice(songs[song_idx].voice);
 
             printf("Playing %s\n", songs[song_idx].name);
             Sequencer_reset();
 
+            op0Cm = songs[song_idx].voice->opParams[FM_OPERATOR0].CmRatio;
             msSlept = 0;
             song_idx++;
             // Sequencer_start();
@@ -260,8 +263,27 @@ example(void)
             }
         }
 
-        _sleepForMs(200); // lets the sequencer go around twice
-        msSlept += 200;
+        double newAdcReading =
+          ((double)adc_voltage_raw(ADC_CHANNEL0) / ADC_MAX_READING) * 10;
+        // Snap the reading at the midpoint
+        if (newAdcReading >= 4.8 && newAdcReading <= 5.2) {
+            newAdcReading = 5;
+        }
+
+        if (op0Cm > 0 && newAdcReading != voltReading) {
+            // 'Tune' the CM either up or down
+            if (newAdcReading < 5 && newAdcReading >= 0) {
+                FmPlayer_updateOperatorCm(FM_OPERATOR0,
+                                          op0Cm / (5 - newAdcReading));
+            } else if (newAdcReading >= 5) {
+                FmPlayer_updateOperatorCm(FM_OPERATOR0,
+                                          op0Cm + (newAdcReading - 5));
+            }
+            voltReading = newAdcReading;
+        }
+
+        _sleepForMs(100); // lets the sequencer go around twice
+        msSlept += 100;
         if (msSlept >= msToSleep) {
             msSlept = 0;
         }
@@ -283,17 +305,15 @@ example(void)
                 break;
             }
 
-            FmPlayer_noteOff();
-            _sleepForMs(500); // let the note fade
-            FmPlayer_updateSynthParams(drones[song_idx].voice);
+            FmPlayer_controlNote(NOTE_CTRL_NOTE_OFF);
+            _sleepForMs(1000); // let the note fade
+
+            FmPlayer_setSynthVoice(drones[song_idx].voice);
             printf("Playing %s\n", drones[song_idx].name);
+            FmPlayer_controlNote(NOTE_CTRL_NOTE_ON);
 
-            _sleepForMs(500); // TODO: Sometimes the note doesn't trigger
-                              // immediately after updating params?
-            FmPlayer_noteOn();
-
+            op0Cm = drones[song_idx].voice->opParams[FM_OPERATOR0].CmRatio;
             song_idx++;
-            // Sequencer_start();
         }
 
         // poll for input on STDIN
@@ -315,14 +335,31 @@ example(void)
             }
         }
 
-        _sleepForMs(200); // lets the sequencer go around twice
-        msSlept += 200;
+        double newAdcReading =
+          ((double)adc_voltage_raw(ADC_CHANNEL0) / ADC_MAX_READING) * 10;
+        // The reading is noisy, make sure we can get back to zero
+        if (newAdcReading >= 4.8 && newAdcReading <= 5.2) {
+            newAdcReading = 5;
+        }
+
+        if (op0Cm > 0 && newAdcReading != voltReading) {
+            if (newAdcReading < 5) {
+                FmPlayer_updateOperatorCm(FM_OPERATOR0,
+                                          op0Cm / (5 - newAdcReading));
+            } else if (newAdcReading >= 5) {
+                FmPlayer_updateOperatorCm(FM_OPERATOR0,
+                                          op0Cm + (newAdcReading - 5));
+            }
+            voltReading = newAdcReading;
+        }
+        _sleepForMs(100); // lets the sequencer go around twice
+        msSlept += 100;
         if (msSlept >= msToSleep) {
             msSlept = 0;
         }
     }
 
-    FmPlayer_noteOff();
+    FmPlayer_controlNote(NOTE_CTRL_NOTE_OFF);
 
     _sleepForMs(1000); // fadeout!
 

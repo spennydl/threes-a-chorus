@@ -16,6 +16,14 @@
 
 #include "das/fm.h"
 
+typedef enum
+{
+    NOTE_CTRL_NONE = 0,
+    NOTE_CTRL_NOTE_ON,
+    NOTE_CTRL_NOTE_OFF,
+    NOTE_CTRL_NOTE_STOCCATO,
+} FmPlayer_NoteCtrl;
+
 /**
  * @brief Initialize the player.
  *
@@ -28,17 +36,8 @@
 int
 FmPlayer_initialize(const FmSynthParams* params);
 
-/**
- * @brief Send a noteOn to the synthesizer.
- */
 void
-FmPlayer_noteOn(void);
-
-/**
- * @brief Send a noteOff to the synthesizer.
- */
-void
-FmPlayer_noteOff(void);
+FmPlayer_controlNote(FmPlayer_NoteCtrl ctrl);
 
 /**
  * @brief Update the active synth parameters.
@@ -46,7 +45,24 @@ FmPlayer_noteOff(void);
  * @param params The parameters to update.
  */
 void
-FmPlayer_updateSynthParams(const FmSynthParams* params);
+FmPlayer_setSynthVoice(const FmSynthParams* params);
+
+void
+FmPlayer_updateOperatorWaveType(FmOperator op, WaveType wave);
+
+void
+FmPlayer_updateOperatorCm(FmOperator op, float cm);
+
+void
+FmPlayer_updateOperatorOutputStrength(FmOperator op, float outStrength);
+
+void
+FmPlayer_fixOperatorToNote(FmOperator op, Note note);
+
+void
+FmPlayer_updateOperatorAlgorithmConnection(FmOperator op,
+                                           FmOperator moddingOp,
+                                           float modIndex);
 
 void
 FmPlayer_setNote(Note note);

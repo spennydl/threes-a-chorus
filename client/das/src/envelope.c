@@ -37,7 +37,7 @@ Env_pwlSample(Env_PiecewiseLinearFn* pwl, float samplePoint)
 }
 
 void
-Env_initEnvelope(Env_Envelope* env, size_t sampleRate)
+Env_prepareEnvelope(Env_Envelope* env, size_t sampleRate)
 {
     float samplesPerMs = sampleRate * 0.001;
     float samplesPerEnv = env->lengthMs * samplesPerMs;

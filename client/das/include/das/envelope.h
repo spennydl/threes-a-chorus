@@ -124,7 +124,7 @@ typedef struct
 } Env_Envelope;
 
 void
-Env_initEnvelope(Env_Envelope* env, size_t sampleRate);
+Env_prepareEnvelope(Env_Envelope* env, size_t sampleRate);
 
 float
 Env_getValueAndAdvance(Env_Envelope* env);

@@ -1,6 +1,5 @@
 #include "das/sequencer.h"
 #include "das/fmplayer.h"
-#include <math.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,7 +73,7 @@ Sequencer_getSlotIndex(int quarter, int eighth, int sixteenth)
 
 void
 Sequencer_fillSlot(SequencerIdx idx,
-                   SequencerControl control,
+                   FmPlayer_NoteCtrl control,
                    Note note,
                    FmSynthParams* synthParams)
 {
@@ -83,12 +82,6 @@ Sequencer_fillSlot(SequencerIdx idx,
     seq->sequence[idx].note = note;
     seq->sequence[idx].synthParams = synthParams;
     pthread_rwlock_unlock(&_seqLock);
-}
-
-void
-Sequencer_updateSynthParams(FmSynthParams* params)
-{
-    FmPlayer_updateSynthParams(params);
 }
 
 static long long
@@ -120,26 +113,16 @@ _runSequencerSlot(SequencerIdx idx)
 {
     SequencerOp* op = &seq->sequence[idx];
     if (op->synthParams != NULL) {
-        FmPlayer_updateSynthParams(op->synthParams);
+        FmPlayer_setSynthVoice(op->synthParams);
     }
 
     if (op->note != NOTE_NONE) {
         FmPlayer_setNote(op->note);
     }
 
-    if (op->op == SEQ_NOTE_ON) {
-        FmPlayer_noteOn();
-    } else if (op->op == SEQ_NOTE_OFF) {
-        FmPlayer_noteOff();
+    if (op->op != NOTE_CTRL_NONE) {
+        FmPlayer_controlNote(op->op);
     }
-
-    if (op->op == SEQ_NOTE_STOCCATO) {
-        // Trigger and gate the envelope
-        FmPlayer_noteOn();
-        FmPlayer_noteOff();
-    }
-    // Legato is a no-op; we assume we've had a NOTEON prior and simply
-    // let the note update
 }
 
 static void*
@@ -179,7 +162,7 @@ _sequencer(void* _data)
             case SEQ_STOP: {
                 // TODO: Would love to be able to block on a condition without
                 // having to hold this unnecessary mutex
-                FmPlayer_noteOff();
+                FmPlayer_controlNote(NOTE_CTRL_NOTE_OFF);
 
                 pthread_mutex_lock(&_stateCondMutex);
                 pthread_cond_wait(&_stateCond, &_stateCondMutex);

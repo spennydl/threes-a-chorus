@@ -1,6 +1,7 @@
 #pragma once
 
 #include "fm.h"
+#include "fmplayer.h"
 
 // TODO: triplets?
 #define SEQ_EIGHTH_NOTE_IN_QUARTER_NOTE 2
@@ -14,18 +15,9 @@
 #define SEQ_EALLOC -1
 #define SEQ_EINVAL -2
 
-typedef enum
-{
-    SEQ_NONE = 0,
-    SEQ_NOTE_ON,
-    SEQ_NOTE_OFF,
-    SEQ_NOTE_STOCCATO,
-    SEQ_NOTE_LEGATO,
-} SequencerControl;
-
 typedef struct
 {
-    SequencerControl op;
+    FmPlayer_NoteCtrl op;
     Note note;
     FmSynthParams* synthParams;
 } SequencerOp;
@@ -42,7 +34,7 @@ Sequencer_getSlotIndex(int quarter, int eighth, int sixteenth);
 
 void
 Sequencer_fillSlot(SequencerIdx idx,
-                   SequencerControl control,
+                   FmPlayer_NoteCtrl control,
                    Note note,
                    FmSynthParams* synthParams);
 
