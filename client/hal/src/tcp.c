@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <pthread.h>
 
 #include <hal/tcp.h>
 
@@ -16,6 +17,8 @@ static unsigned int serverlen;
 static struct sockaddr_in serverAddress;
 
 static struct hostent *server;
+
+static pthread_mutex_t tcpLock = PTHREAD_MUTEX_INITIALIZER;
 
 static ssize_t
 Tcp_sendExitCode()
@@ -65,15 +68,20 @@ Tcp_cleanupTcpClient()
 ssize_t
 Tcp_makeServerRequest(char* message, char* buffer)
 {
+    pthread_mutex_lock(&tcpLock);
     Tcp_sendMessage(message);
     bzero(buffer, MAX_BUFFER_SIZE);
-    return Tcp_receiveMessage(buffer);
+    ssize_t res = Tcp_receiveMessage(buffer);
+    pthread_mutex_unlock(&tcpLock);
+    return res;
 }
 
 ssize_t
 Tcp_sendMessage(char* message)
 {
-    return send(sockfd, message, strlen(message), 0);
+    char msg[MAX_BUFFER_SIZE] = {0};
+    strncpy(msg, message, strlen(message));
+    return send(sockfd, msg, MAX_BUFFER_SIZE, 0);
 }
 
 ssize_t
@@ -85,6 +93,7 @@ Tcp_receiveMessage(char* buffer)
 ssize_t
 Tcp_requestFile(char* fileName)
 {
+    pthread_mutex_lock(&tcpLock);
     Tcp_sendMessage(SEND_FILE);
     char fileSizeBuffer[MAX_BUFFER_SIZE];
     Tcp_receiveMessage(fileSizeBuffer);
@@ -96,6 +105,7 @@ Tcp_requestFile(char* fileName)
         char errorMessage[512];
         snprintf(errorMessage, 512, "Could not open '%s' to write!", fileName);
         error(errorMessage);
+        pthread_mutex_unlock(&tcpLock);
         return -1;
     }
 
@@ -111,6 +121,7 @@ Tcp_requestFile(char* fileName)
         if(len <= 0) {
             perror("Ran into error while recv file");
             fclose(receivedFile);
+            pthread_mutex_unlock(&tcpLock);
             return len;
         }
 
@@ -128,5 +139,7 @@ Tcp_requestFile(char* fileName)
     #endif
 
     fclose(receivedFile);
+    pthread_mutex_unlock(&tcpLock);
+
     return remainingData;
 }

@@ -9,6 +9,7 @@
 #define MAX_BUFFER_SIZE 1024
 #define EXIT_CODE "TIMETOGOBYE"
 #define SEND_FILE "file"
+#define BEAT_CODE "beat"
 
 /**
  * Initialize TCP client from hostname
@@ -24,7 +25,7 @@ void
 Tcp_cleanupTcpClient();
 
 /**
- * Send a message to the server and expect a response to that message
+ * Send a message to the server and expect a response to that message and uses mutex lock to make sure to be thread safe!
  * @param message The message to send
  * @param buffer Buffer to put response into. Expects length to be MAX_SIZE
  * @return ssize_t Return the number of bytes read into buffer or error code if fails
@@ -49,7 +50,7 @@ ssize_t
 Tcp_receiveMessage(char* buffer);
 
 /**
- * Request a file from the server and download it as filename
+ * Request a file from the server and download it as filename. Uses a mutex lock to be sure to be thread safe.
  * @param message Name to save recieved file as
  * @return Number of bytes downloaded or -1 on fail
 */

@@ -6,43 +6,16 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <sys/stat.h>
-#include <tcp.h>
 #include <string.h>
 
-// Example function that just sends back what it gets
-static void
-onMessageRecieved(void* instance, const char* newMessage, int socketFd)
-{
-    // Not using instance so just casting it to null in this example to get rid of warnings that it isn't used
-    // If you know how to make it stop a better way please tell me!
-    (void)instance;
-
-    if(strcmp(newMessage, SEND_FILE) != 0) {
-        printf("Got: %s. Echoing!\n", newMessage);
-        ssize_t res = Tcp_sendTcpServerResponse(newMessage, socketFd);
-        printf("Code from echo: %ld\n", res);
-    }
-    else {
-        printf("Got: %s. Sending file!\n", newMessage);
-
-        ssize_t res = Tcp_sendFile("stillalive.midi", socketFd);
-        printf("Code from file sending: %ld\n", res);
-    }
-   
-}
+#include "tcp.h"
+#include "beatsync.h"
 
 int
 main()
 {
     Tcp_initializeTcpServer();
-
-    int uselessServerInstance = 42;
-
-    TcpObserver exampleObserver;
-    exampleObserver.instance = &uselessServerInstance;
-    exampleObserver.notification = onMessageRecieved;
-
-    Tcp_attachToTcpServer(&exampleObserver);
+    BeatSync_initialize();
 
     while(true)
     {
@@ -54,5 +27,6 @@ main()
 
     printf("Shutting down!\n");
 
+    BeatSync_cleanup();
     Tcp_cleanUpTcpServer();
 }
