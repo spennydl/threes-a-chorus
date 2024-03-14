@@ -4,15 +4,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "hal/tcp.h"
 #include "beatsync.h"
-#include "midiPlayer.h"
 #include "das/fmplayer.h"
+#include "hal/tcp.h"
+#include "midiPlayer.h"
 
 int
 main(int argc, char** argv)
 {
-    if(argc < 3) {
+    if (argc < 3) {
         printf("You must specify the server ip (192.168.7.1), midi channel");
         return 0;
     }
@@ -28,7 +28,7 @@ main(int argc, char** argv)
 
     MidiPlayer_playMidiFile("test.midi", channel);
 
-    while(1) {
+    while (1) {
         // Just chill man. No way to gracefully shutdown yet :D
     }
 
