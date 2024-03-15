@@ -11,9 +11,6 @@
 /** Number of samples in the tables. */
 #define WT_N_SAMPLES 256
 
-/** 2pi. */
-static const double PI2 = 2.0 * M_PI;
-
 /** Types of waves available. */
 typedef enum
 {
@@ -26,7 +23,7 @@ typedef enum
  * @brief Sample the table at the given angle.
  *
  * @param type The table to sample.
- * @param angle The angle to sample at.
+ * @param angle The angle to sample at, between 0 and 1.
  * @return double The sample.
  */
 double
