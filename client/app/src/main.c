@@ -6,10 +6,24 @@
 
 #include "hal/tcp.h"
 #include "beatsync.h"
+#include "midiPlayer.h"
+#include "das/fmplayer.h"
 
 int
-main(int argc, char** argv)
+main()
 {
+    FmPlayer_initialize(&FM_DEFAULT_PARAMS);
+    MidiPlayer_initialize();
+
+    MidiPlayer_playMidiFile("stillalive.midi");
+    while(1)
+    {
+
+    }
+
+    MidiPlayer_cleanup();
+    FmPlayer_close();
+/*
     if(argc < 2) {
         printf("You must specify the server ip (192.168.7.1)\n");
         return 0;
@@ -24,6 +38,6 @@ main(int argc, char** argv)
 
     BeatSync_cleanup();
     Tcp_cleanupTcpClient();
-
+*/
     return 0;
 }
