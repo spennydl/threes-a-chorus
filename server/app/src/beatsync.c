@@ -21,6 +21,8 @@ static int bpm = 120;
 
 static atomic_long msLastBeatStarted = 0;
 
+static char* midiToSend;
+
 static long
 msBetweenBeats()
 {
@@ -39,6 +41,15 @@ onMessageRecieved(void* instance, const char* newMessage, int socketFd)
         ssize_t res = Tcp_sendTcpServerResponse(msLeft, socketFd);
         (void)res;
     }
+    if(strcmp(newMessage, SEND_FILE) == 0) {
+        Tcp_sendFile(midiToSend, socketFd);
+    }
+}
+
+void
+BeatSync_setMidiToSend(char* path)
+{
+    midiToSend = path;
 }
 
 void
@@ -68,7 +79,7 @@ void* beatSyncThreadWorker(void* p)
         long msToSleep = msBetweenBeats();
         msLastBeatStarted = Timeutils_getTimeInMs();
         Timeutils_sleepForMs(msToSleep);
-        printf("After being eepy for %ldms...Beat!\n", msToSleep);
+        //printf("After being eepy for %ldms...Beat!\n", msToSleep);
     }
 
     return NULL;

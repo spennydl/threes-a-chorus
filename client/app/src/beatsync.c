@@ -8,6 +8,7 @@
 #include "hal/timeutils.h"
 #include "hal/tcp.h"
 #include "beatsync.h"
+#include "midiPlayer.h"
 
 static bool running = false;
 
@@ -40,9 +41,8 @@ beatRequesterWorker(void* p)
         msToSleep = strtol(res, NULL, 10);
         Timeutils_sleepForMs(msToSleep);
         
-        printf("Slept for %ldms but now ...Beat!\n", msToSleep);
-        // TODO make sound here. If we need granularity of more than a quarter note
-        // We should do those calculations locally I think...
+        //printf("Slept for %ldms but now ...Beat!\n", msToSleep);
+        MidiPlayer_canPlayNextBeat();
     }
 
     return NULL;

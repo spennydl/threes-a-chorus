@@ -15,3 +15,6 @@ Timeutils_getTimeInNs(void);
 
 void
 Timeutils_sleepForMs(long long delayInMs);
+
+void
+Timeutils_sleepForNs(long long delayInNs);

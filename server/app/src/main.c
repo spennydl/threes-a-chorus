@@ -20,9 +20,15 @@ main()
     while(true)
     {
         char input[32];
-        printf("Enter anything to stop the server: ");
+        printf("Enter exit to quit or a midifile to set it as the track: ");
         scanf("%s", input);
-        break;
+
+        if(strcmp(input, "exit") == 0) {
+            break;
+        }
+
+        BeatSync_setMidiToSend(input);
+        printf("Set new midi file\n");
     }
 
     printf("Shutting down!\n");

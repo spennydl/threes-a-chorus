@@ -16,6 +16,7 @@
 
 struct MidiEventNode {
     struct MidiEventNode* next;
+    int channel;
     unsigned int status;
     uint8_t param1;
     uint8_t param2;
@@ -28,6 +29,11 @@ static bool running = true;
 
 static struct MidiEventNode* currentMidiHead;
 static struct MidiEventNode* currentNode;
+static int channelToPlayWith = -1;
+static int ppq;
+static int bpm = 120;
+static long long msLeft = 0;
+static atomic_long timeUntilNextEvent = 0;
 
 static pthread_t playerThread;
 
@@ -46,13 +52,12 @@ static void clearAllEventNodes()
     clearNode(currentMidiHead);
 }
 
-static void parse_and_dump(struct midi_parser *parser)
+static void parse_and_dump(struct midi_parser *parser, int channel)
 {
   clearAllEventNodes();
   currentMidiHead = NULL;
   struct MidiEventNode* prev;
   enum midi_parser_status status;
-  int mychannel = 1;
 
   while (1) {
     status = midi_parse(parser);
@@ -70,11 +75,13 @@ static void parse_and_dump(struct midi_parser *parser)
       break;
 
     case MIDI_PARSER_HEADER:
-      //printf("header\n");
-      //printf("  size: %d\n", parser->header.size);
-      //printf("  format: %d [%s]\n", parser->header.format, midi_file_format_name(parser->header.format));
-      //printf("  tracks count: %d\n", parser->header.tracks_count);
-      //printf("  time division: %d\n", parser->header.time_division);
+      printf("header\n");
+      printf("  size: %d\n", parser->header.size);
+      printf("  format: %d [%s]\n", parser->header.format, midi_file_format_name(parser->header.format));
+      printf("  tracks count: %d\n", parser->header.tracks_count);
+      printf("  time division: %d\n", parser->header.time_division);
+      channelToPlayWith = channel % parser->header.tracks_count;
+      ppq = parser->header.time_division;
       break;
 
     case MIDI_PARSER_TRACK:
@@ -83,23 +90,16 @@ static void parse_and_dump(struct midi_parser *parser)
       break;
 
     case MIDI_PARSER_TRACK_MIDI:
-      if(parser->midi.channel != mychannel)
-      {
+      if(parser->midi.channel != channelToPlayWith) {
         break;
       }
-      /*puts("track-midi");
-      printf("  time: %lld\n", parser->vtime);
-      printf("  status: %d [%s]\n", parser->midi.status, midi_status_name(parser->midi.status));
-      printf("  channel: %d\n", parser->midi.channel);
-      printf("  param1: %d\n", parser->midi.param1);
-      printf("  param2: %d\n", parser->midi.param2);*/
-
       struct MidiEventNode* eventNode = malloc(sizeof(struct MidiEventNode));
       eventNode->status = parser->midi.status;
       eventNode->vtime = parser->vtime;
       eventNode->param1 = parser->midi.param1;
       eventNode->param2 = parser->midi.param2;
       eventNode->next = NULL;
+      eventNode->channel = parser->midi.channel;
 
       if(currentMidiHead == NULL)
       {
@@ -135,7 +135,7 @@ static void parse_and_dump(struct midi_parser *parser)
   }
 }
 
-static int parse_file(const char *path)
+static int parse_file(const char *path, int channel)
 {
 
   struct stat st;
@@ -163,7 +163,7 @@ static int parse_file(const char *path)
   parser.size  = st.st_size;
   parser.in    = mem;
 
-  parse_and_dump(&parser);
+  parse_and_dump(&parser, channel);
 
   munmap(mem, st.st_size);
   close(fd);
@@ -184,39 +184,70 @@ MidiPlayer_cleanup()
 }
 
 void
-MidiPlayer_playMidiFile(char* path)
+MidiPlayer_playMidiFile(char* path, int channelNumber)
 {
     readyToPlay = false;
-    parse_file(path);
+    parse_file(path, channelNumber);
+    timeUntilNextEvent = 0;
     currentNode = currentMidiHead;
     readyToPlay = true;
+}
+
+void
+MidiPlayer_canPlayNextBeat()
+{
+    msLeft += 60000000000 / bpm;
 }
 
 void*
 midiPlayerWorker(void* p)
 {
     (void)p;
+    timeUntilNextEvent = 0;
 
     while(running)
     {
-        if(!readyToPlay || currentNode == NULL)
-        {
+        if(!readyToPlay || currentNode == NULL || msLeft <= 0) {
             continue;
         }
 
-        Timeutils_sleepForMs(currentNode->vtime);
-
-        if(currentNode->status == MIDI_STATUS_NOTE_ON)
-        {
-            FmPlayer_setNote(C4);
-            FmPlayer_controlNote(NOTE_CTRL_NOTE_ON);
-        }
-        else if(currentNode->status == MIDI_STATUS_NOTE_OFF)
-        {
-            FmPlayer_controlNote(NOTE_CTRL_NOTE_OFF);
+        if(msLeft < 0) {
+            msLeft = 0;
         }
 
-        currentNode = currentNode->next;
+        long long chunkOfTime = (long long)((1000000 * 60000.0 / (bpm * ppq)));
+
+        //printf("%ld - %lld\n", timeUntilNextEvent, chunkOfTime);
+
+        if(timeUntilNextEvent > 0) { 
+            timeUntilNextEvent -= chunkOfTime;
+            msLeft -= chunkOfTime;
+            Timeutils_sleepForNs(chunkOfTime);
+        }
+        else {
+            if(currentNode->status == MIDI_STATUS_NOTE_ON)
+            {
+                // C2 = 0 for fm
+                // C2 = 36 for other
+                // So the note we want to  play is - 36 away
+
+                int fmNote = currentNode->param1 - 36;
+
+                FmPlayer_setNote(fmNote);
+
+                FmPlayer_controlNote(NOTE_CTRL_NOTE_ON);
+                
+            }
+            else if(currentNode->status == MIDI_STATUS_NOTE_OFF)
+            {
+                FmPlayer_controlNote(NOTE_CTRL_NOTE_OFF);
+            }
+            
+
+            currentNode = currentNode->next;
+            timeUntilNextEvent = (long long)(currentNode->vtime * (1000000 * 60000.0 / (bpm * ppq)));
+        }
+        
     }
 
     return NULL;

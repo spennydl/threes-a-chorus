@@ -7,7 +7,10 @@ void
 MidiPlayer_cleanup();
 
 void
-MidiPlayer_playMidiFile(char* path);
+MidiPlayer_playMidiFile(char* path, int channelNumber);
+
+void
+MidiPlayer_canPlayNextBeat();
 
 void*
 midiPlayerWorker(void* p);
