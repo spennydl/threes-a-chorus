@@ -39,9 +39,6 @@ Sequencer_fillSlot(SequencerIdx idx,
                    FmSynthParams* synthParams);
 
 void
-Sequencer_updateSynthParams(FmSynthParams* params);
-
-void
 Sequencer_start(void);
 
 void
