@@ -33,7 +33,7 @@ static int channelToPlayWith = -1;
 static int ppq;
 static int bpm = 105;
 static long long nsLeft = 0;
-static atomic_long timeUntilNextEvent = 0;
+static atomic_llong timeUntilNextEvent = 0;
 static long long beatOffset = 0;
 
 static pthread_t playerThread;
@@ -81,7 +81,7 @@ static void makeLinkedListLoop()
     current->next = currentMidiHead;
 }
 
-static void parse_and_dump(struct midi_parser *parser, int channel)
+static void parse_and_dump(struct midi_parser *parser, int channel, long long* trackLengths)
 {
   clearAllEventNodes();
   currentMidiHead = NULL;
@@ -110,16 +110,19 @@ static void parse_and_dump(struct midi_parser *parser, int channel)
       printf("  tracks count: %d\n", parser->header.tracks_count);
       printf("  time division: %d\n", parser->header.time_division);
       channelToPlayWith = channel % parser->header.tracks_count;
-      printf("Channel to play with is %d\n", channelToPlayWith);
       ppq = parser->header.time_division;
       break;
 
     case MIDI_PARSER_TRACK:
       //puts("track");
-      printf("  length: %lld\n", vTimeInNs(parser->track.size) / 1000000000);
+      printf("  length: %d\n", parser->track.size);
       break;
 
     case MIDI_PARSER_TRACK_MIDI:
+
+      trackLengths[parser->midi.channel] += parser->vtime;
+
+
       if(parser->midi.channel != channelToPlayWith) {
         break;
       }
@@ -194,7 +197,32 @@ parseMidiFileChannel(const char *path, int channel)
   parser.size  = st.st_size;
   parser.in    = mem;
 
-  parse_and_dump(&parser, channel);
+  long long trackLengths[16] = {0};
+
+  parse_and_dump(&parser, channel, trackLengths);
+
+  long long longestTrackLength = 0;
+
+  for(int i = 0; i < 16; i++) {
+    longestTrackLength = trackLengths[i] > longestTrackLength ? trackLengths[i] : longestTrackLength;
+  }
+
+  long long padding = longestTrackLength - trackLengths[channelToPlayWith];
+  struct MidiEventNode* current = currentMidiHead;
+
+  struct MidiEventNode* paddingNode = malloc(sizeof(struct MidiEventNode));
+  paddingNode->status = MIDI_STATUS_NOTE_OFF;
+  paddingNode->vtime = padding;
+  paddingNode->param1 = 0;
+  paddingNode->param2 = 0;
+  paddingNode->next = NULL;
+  paddingNode->channel = channelToPlayWith;
+
+  while(current->next != NULL) {
+    current = current->next;
+  }
+
+  current->next = paddingNode;
 
   munmap(mem, st.st_size);
   close(fd);
