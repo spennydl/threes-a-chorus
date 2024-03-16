@@ -31,13 +31,27 @@ static struct MidiEventNode* currentMidiHead;
 static struct MidiEventNode* currentNode;
 static int channelToPlayWith = -1;
 static int ppq;
-static int bpm = 120;
-static long long msLeft = 0;
+static int bpm = 105;
+static long long nsLeft = 0;
 static atomic_long timeUntilNextEvent = 0;
+static long long beatOffset = 0;
 
 static pthread_t playerThread;
 
-static void clearNode(struct MidiEventNode* node)
+static long long
+vTimeInNs(int vtime)
+{
+  return (long long)(vtime * (60000000000 / (bpm * ppq)));
+}
+
+static long long
+nsPerBeat()
+{
+  return 60000000000 / bpm;
+}
+
+static void
+clearNode(struct MidiEventNode* node)
 {
     if(node == NULL) {
         return;
@@ -47,9 +61,24 @@ static void clearNode(struct MidiEventNode* node)
     free(node);
 }
 
-static void clearAllEventNodes()
+static void
+clearAllEventNodes()
 {
     clearNode(currentMidiHead);
+}
+
+static void makeLinkedListLoop()
+{
+    if(currentMidiHead == NULL) {
+      printf("Warning: midi head is null when trying to make loop\n");
+      return;
+    }
+
+    struct MidiEventNode* current = currentMidiHead;
+    while(current->next != NULL) {
+      current = current->next;
+    }
+    current->next = currentMidiHead;
 }
 
 static void parse_and_dump(struct midi_parser *parser, int channel)
@@ -81,12 +110,13 @@ static void parse_and_dump(struct midi_parser *parser, int channel)
       printf("  tracks count: %d\n", parser->header.tracks_count);
       printf("  time division: %d\n", parser->header.time_division);
       channelToPlayWith = channel % parser->header.tracks_count;
+      printf("Channel to play with is %d\n", channelToPlayWith);
       ppq = parser->header.time_division;
       break;
 
     case MIDI_PARSER_TRACK:
       //puts("track");
-      //printf("  length: %d\n", parser->track.size);
+      printf("  length: %lld\n", vTimeInNs(parser->track.size) / 1000000000);
       break;
 
     case MIDI_PARSER_TRACK_MIDI:
@@ -135,7 +165,8 @@ static void parse_and_dump(struct midi_parser *parser, int channel)
   }
 }
 
-static int parse_file(const char *path, int channel)
+static int
+parseMidiFileChannel(const char *path, int channel)
 {
 
   struct stat st;
@@ -187,16 +218,48 @@ void
 MidiPlayer_playMidiFile(char* path, int channelNumber)
 {
     readyToPlay = false;
-    parse_file(path, channelNumber);
+    parseMidiFileChannel(path, channelNumber);
+
     timeUntilNextEvent = 0;
     currentNode = currentMidiHead;
+    makeLinkedListLoop();
+
+    struct MidiEventNode* current = currentMidiHead;
+    long long beatOffsetInNs = nsPerBeat() * beatOffset;
+
+    printf("Beat offset %lld or %lld in ns\n", beatOffset, beatOffsetInNs);
+
+    while(beatOffsetInNs > nsPerBeat()) {
+      long long delay = vTimeInNs(current->vtime);
+      beatOffsetInNs -= delay;
+      current = current->next;
+    }
+
+    currentNode = current;
+
+    // Wait for the tiny amount that is left
+    Timeutils_sleepForNs(beatOffsetInNs);
+
     readyToPlay = true;
 }
 
 void
-MidiPlayer_canPlayNextBeat()
+MidiPlayer_playNextBeat()
 {
-    msLeft += 60000000000 / bpm;
+    nsLeft += nsPerBeat();
+}
+
+void
+MidiPlayer_setBeatOffset(long long newBeatOffset)
+{
+  printf("New beat offset %lld\n", newBeatOffset);
+  beatOffset = newBeatOffset;
+}
+
+void
+MidiPlayer_setBpm(int newBpm)
+{
+  bpm = newBpm;
 }
 
 void*
@@ -207,12 +270,12 @@ midiPlayerWorker(void* p)
 
     while(running)
     {
-        if(!readyToPlay || currentNode == NULL || msLeft <= 0) {
+        if(!readyToPlay || currentNode == NULL || nsLeft <= 0) {
             continue;
         }
 
-        if(msLeft < 0) {
-            msLeft = 0;
+        if(nsLeft < 0) {
+            nsLeft = 0;
         }
 
         long long chunkOfTime = (long long)((1000000 * 60000.0 / (bpm * ppq)));
@@ -221,7 +284,7 @@ midiPlayerWorker(void* p)
 
         if(timeUntilNextEvent > 0) { 
             timeUntilNextEvent -= chunkOfTime;
-            msLeft -= chunkOfTime;
+            nsLeft -= chunkOfTime;
             Timeutils_sleepForNs(chunkOfTime);
         }
         else {
@@ -245,7 +308,7 @@ midiPlayerWorker(void* p)
             
 
             currentNode = currentNode->next;
-            timeUntilNextEvent = (long long)(currentNode->vtime * (1000000 * 60000.0 / (bpm * ppq)));
+            timeUntilNextEvent = vTimeInNs(currentNode->vtime);
         }
         
     }

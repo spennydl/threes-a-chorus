@@ -12,26 +12,20 @@
 int
 main(int argc, char** argv)
 {
-    if(argc < 4) {
-        printf("You must specify the server ip (192.168.7.1), midi file, channel");
+    if(argc < 3) {
+        printf("You must specify the server ip (192.168.7.1), midi channel");
         return 0;
     }
 
-
-    printf("%s %s\n", argv[2], argv[3]);
-
-    char* path = argv[2];
-    int channel = atoi(argv[3]);
+    int channel = atoi(argv[2]);
 ;
     Tcp_initializeTcpClient(argv[1]);
     FmPlayer_initialize(&FM_DEFAULT_PARAMS);
 
-    Tcp_requestFile("test.midi");
-
     MidiPlayer_initialize();
     BeatSync_initialize();
+    BeatSync_requestBeatOffsetAndMidi();
 
-    (void)path;
     MidiPlayer_playMidiFile("test.midi", channel);
 
     while(1) {

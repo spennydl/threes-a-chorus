@@ -1,3 +1,5 @@
+#define OFFSET_CODE "OFFSET"
+
 /**
  * Init all threads for BeatSync
  *
@@ -13,6 +15,9 @@ BeatSync_cleanup();
 
 void
 BeatSync_setMidiToSend(char* path);
+
+void
+BeatSync_setBpm(int newBpm);
 
 /**
  * A thread that sleeps between beats and updates variables saying how long to wait until the next beat

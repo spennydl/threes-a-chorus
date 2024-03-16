@@ -10,7 +10,13 @@ void
 MidiPlayer_playMidiFile(char* path, int channelNumber);
 
 void
-MidiPlayer_canPlayNextBeat();
+MidiPlayer_playNextBeat();
+
+void
+MidiPlayer_setBeatOffset(long long newBeatOffset);
+
+void
+MidiPlayer_setBpm(int newBpm);
 
 void*
 midiPlayerWorker(void* p);
