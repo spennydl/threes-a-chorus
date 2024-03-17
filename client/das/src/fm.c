@@ -19,48 +19,44 @@
 /** Default sample rate. */
 #define SAMPLE_RATE 44100
 /** How many times per second to update the ADSR. */
-#define ADSR_UPDATES_PER_SEC 32
+#define ADSR_UPDATES_PER_SEC 64
 
 /** The FM synthesizer.*/
 typedef struct
 {
     // start with critical section data to ensure alignment
     /** Current operator envelope values. */
-    double opEnvelope[FM_OPERATORS];
+    float opEnvelope[FM_OPERATORS];
     /** Current operator sampling angles. */
-    double opAngle[FM_OPERATORS];
+    float opAngle[FM_OPERATORS];
     /** Current operator angle update step. */
-    double opStep[FM_OPERATORS];
+    float opStep[FM_OPERATORS];
     /** Operator modulation matrix. */
-    double opModBy[FM_OPERATORS * FM_OPERATORS];
+    float opModBy[FM_OPERATORS * FM_OPERATORS];
     /** Operator output strength. */
-    double opOutput[FM_OPERATORS];
+    float opOutput[FM_OPERATORS];
     /** Operator wave type. */
     WaveType opWave[FM_OPERATORS];
 
     // Everything else is configuration and control
     /** Synthesizer sample rate. */
     size_t sampleRate;
-    /** Was a trigger requested? */
-    _Atomic int needTrigger;
-    /** Was a gate requested? */
-    _Atomic int needGate;
 
     /** The note we are playing. */
     Note note;
     /** The base frequency. */
-    double baseFreq;
+    float baseFreq;
     /** CM ratio of the operators. */
-    double opCM[FM_OPERATORS];
+    float opCM[FM_OPERATORS];
 
     /** Operator ADSRs. */
-    AdsrEnvelope opAdsr[FM_OPERATORS];
+    Env_Envelope opAdsr[FM_OPERATORS];
 
 } _FmSynth;
 
 /** Calculate the step value for the given frequency given the sample rate.*/
-inline static double
-_calcStep(double freq, size_t sampleRate);
+inline static float
+_calcStep(float freq, size_t sampleRate);
 /** Update the operator frequency. for the current note. */
 inline static void
 _updateOperatorFreq(_FmSynth* synth, FmOperator op);
@@ -71,6 +67,9 @@ _updateAllOperatorFreq(_FmSynth* synth);
 /** Apply the paramters to the synthesizer.*/
 static void
 _configure(_FmSynth* synth, const FmSynthParams* params, bool initialize);
+/** Set params for one operator */
+static void
+_setOpParams(_FmSynth* synth, FmOperator op, const OperatorParams* params);
 /** Allocate a new _FmSynth. */
 static _FmSynth*
 _fmSynthAlloc(void);
@@ -79,7 +78,7 @@ static void
 _setNote(_FmSynth* synth, Note note);
 /** Set an operator's CM value.*/
 static void
-_setOperatorCM(_FmSynth* synth, FmOperator op, double ratio);
+_setOperatorCM(_FmSynth* synth, FmOperator op, float ratio, Note fixTo);
 /** Trigger all operator's ADSR's. */
 static void
 _noteOn(_FmSynth* synth);
@@ -87,18 +86,19 @@ _noteOn(_FmSynth* synth);
 static void
 _noteOff(_FmSynth* synth);
 
-inline static double
-_calcStep(double freq, size_t sample_rate)
+inline static float
+_calcStep(float freq, size_t sample_rate)
 {
-    // samples/sec / periods/sec(freq) = samples/period.
-    return PI2 / (sample_rate / freq);
+    return (freq / sample_rate);
 }
 
 inline static void
 _updateOperatorFreq(_FmSynth* synth, FmOperator op)
 {
-    double opFreq = synth->baseFreq * synth->opCM[op];
-    synth->opStep[op] = _calcStep(opFreq, synth->sampleRate);
+    if (synth->opCM[op] > 0) {
+        float opFreq = synth->baseFreq * synth->opCM[op];
+        synth->opStep[op] = _calcStep(opFreq, synth->sampleRate);
+    }
 }
 
 inline static void
@@ -107,18 +107,6 @@ _updateAllOperatorFreq(_FmSynth* synth)
     for (int op = 0; op < FM_OPERATORS; op++) {
         _updateOperatorFreq(synth, op);
     }
-}
-
-inline static double
-cycle2Pi(double value)
-{
-    while (value < 0) {
-        value += PI2;
-    }
-    if (value > PI2) {
-        value = fmod(value, PI2);
-    }
-    return value;
 }
 
 static _FmSynth*
@@ -131,47 +119,59 @@ _fmSynthAlloc(void)
     return synth;
 }
 
+// TODO: property setting suuuuuucks here.
+// This function should only really be used if we're changing voices.
+// We need a different approach for tweaking params on the fly.
 static void
 _configure(_FmSynth* synth, const FmSynthParams* params, bool initialize)
 {
     if (NULL != synth) {
-
         if (initialize) {
             synth->sampleRate = params->sampleRate;
         }
 
-        _setNote(synth, params->note);
-
         for (int op = 0; op < FM_OPERATORS; op++) {
             const OperatorParams* opParams = &params->opParams[op];
-            synth->opWave[op] = opParams->waveType;
 
-            _setOperatorCM(synth, op, params->opParams[op].CmRatio);
-            synth->opOutput[op] = opParams->outputStrength;
+            _setOpParams(synth, op, opParams);
 
-            synth->opAdsr[op].attackMs = opParams->adsr.attackMs;
-            synth->opAdsr[op].decayMs = opParams->adsr.decayMs;
-            synth->opAdsr[op].releaseMs = opParams->adsr.releaseMs;
-            synth->opAdsr[op].attackPeak = opParams->adsr.attackPeak;
-            synth->opAdsr[op].sustainLevel = opParams->adsr.sustainLevel;
-            // TODO: If we are in the middle of a note we do not want to do
-            // this, and we need a way to know that we haven't put ADSR into an
-            // invalid state.
-            // TODO: something that works whether or not we are updating or
-            // intiializing.
-            // Need to rethink the ADSR impl.
-            if (initialize) {
-                Env_adsrInit(
-                  &synth->opAdsr[op], ADSR_UPDATES_PER_SEC, synth->sampleRate);
-            }
+            // TODO: this sucks
+            memcpy(&synth->opAdsr[op],
+                   &params->opEnvelopes[op],
+                   sizeof(Env_Envelope));
 
-            int modByIdx = op * FM_OPERATORS;
-            for (int modOp = 0; modOp < FM_OPERATORS; modOp++) {
-                synth->opModBy[modByIdx + modOp] =
-                  opParams->algorithmConnections[modOp];
-            }
+            Env_prepareEnvelope(&synth->opAdsr[op],
+                                synth->sampleRate / ADSR_UPDATES_PER_SEC);
         }
     }
+}
+
+static void
+_setOpParams(_FmSynth* synth, FmOperator op, const OperatorParams* params)
+{
+    synth->opWave[op] = params->waveType;
+    synth->opOutput[op] = params->outputStrength;
+
+    _setOperatorCM(synth, op, params->CmRatio, params->fixToNote);
+
+    int modByIdx = op * FM_OPERATORS;
+    for (int modOp = 0; modOp < FM_OPERATORS; modOp++) {
+        synth->opModBy[modByIdx + modOp] = params->algorithmConnections[modOp];
+    }
+}
+
+void
+Fm_updateOpParams(FmSynthesizer* s, FmOperator op, const OperatorParams* params)
+{
+    _FmSynth* synth = s->__FmSynth;
+    _setOpParams(synth, op, params);
+}
+
+void
+Fm_setNote(FmSynthesizer* s, Note note)
+{
+    _FmSynth* synth = s->__FmSynth;
+    _setNote(synth, note);
 }
 
 static void
@@ -185,23 +185,28 @@ _setNote(_FmSynth* synth, Note note)
     // - F is the reference note frequency
     // - N is how many half-steps away (positive or negative) the target note is
     //   from the reference note.
-    synth->baseFreq = A_440 * powf(TWELVETH_ROOT_OF_TWO, note);
+    synth->baseFreq = C2_HZ * powf(TWELVETH_ROOT_OF_TWO, note);
     synth->note = note;
     _updateAllOperatorFreq(synth);
 }
 
 static void
-_setOperatorCM(_FmSynth* synth, FmOperator op, double ratio)
+_setOperatorCM(_FmSynth* synth, FmOperator op, float ratio, Note fixTo)
 {
     synth->opCM[op] = ratio;
-    _updateOperatorFreq(synth, op);
+    if (ratio > 0) {
+        _updateOperatorFreq(synth, op);
+    } else {
+        float freq = C2_HZ * powf(TWELVETH_ROOT_OF_TWO, fixTo);
+        synth->opStep[op] = _calcStep(freq, synth->sampleRate);
+    }
 }
 
 static void
 _noteOn(_FmSynth* synth)
 {
     for (int op = 0; op < FM_OPERATORS; op++) {
-        Env_adsrTrigger(&synth->opAdsr[op]);
+        Env_trigger(&synth->opAdsr[op]);
     }
 }
 
@@ -209,7 +214,7 @@ static void
 _noteOff(_FmSynth* synth)
 {
     for (int op = 0; op < FM_OPERATORS; op++) {
-        Env_adsrGate(&synth->opAdsr[op]);
+        Env_gate(&synth->opAdsr[op]);
     }
 }
 
@@ -247,8 +252,6 @@ Fm_createFmSynthesizer(const FmSynthParams* params)
         free(synth);
         return NULL;
     }
-    synth->needTrigger = 0;
-    synth->needGate = 0;
     fmSynth->__FmSynth = synth;
 
     _configure(synth, params, true);
@@ -271,14 +274,14 @@ void
 Fm_noteOn(FmSynthesizer* s)
 {
     _FmSynth* synth = s->__FmSynth;
-    synth->needTrigger = 1;
+    _noteOn(synth);
 }
 
 void
 Fm_noteOff(FmSynthesizer* s)
 {
     _FmSynth* synth = s->__FmSynth;
-    synth->needGate = 1;
+    _noteOff(synth);
 }
 
 void
@@ -294,8 +297,8 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
     _FmSynth* synth = s->__FmSynth;
 
     // I believe stack vars are zered by default?
-    double opSamples[FM_OPERATORS] = { 0 };
-    double opMod[FM_OPERATORS] = { 0 };
+    float opSamples[FM_OPERATORS] = { 0 };
+    float opMod[FM_OPERATORS] = { 0 };
     for (size_t s = 0; s < nSamples; s++) {
 
         // Compute and cache the current sample values from each
@@ -312,33 +315,24 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
             int idx = op * FM_OPERATORS;
             opMod[op] = 0;
             for (int modOp = 0; modOp < FM_OPERATORS; modOp++) {
-                opMod[op] += synth->opModBy[idx + modOp] * opSamples[modOp];
+                opMod[op] += synth->opModBy[idx + modOp] *
+                             (opSamples[modOp] * synth->opStep[modOp]); // ??
             }
 
             synth->opAngle[op] += synth->opStep[op] + opMod[op];
-            synth->opAngle[op] = cycle2Pi(synth->opAngle[op]);
+            synth->opAngle[op] -= floor(synth->opAngle[op]);
         }
 
         // If we need to, update the ADSR envelope and triggers.
         if (s % ADSR_UPDATES_PER_SEC == 0) {
-            // TODO: Maybe there is a better and faster solution for this?
-            // Do the trigger first so that if we are in an invalid state where
-            // both trigger and gate are set then we can default to off.
-            if (synth->needTrigger) {
-                _noteOn(synth);
-                synth->needTrigger = 0;
-            }
-            if (synth->needGate) {
-                _noteOff(synth);
-                synth->needGate = 0;
-            }
             for (int op = 0; op < FM_OPERATORS; op++) {
-                synth->opEnvelope[op] = Env_adsrUpdate(&synth->opAdsr[op]);
+                synth->opEnvelope[op] =
+                  Env_getValueAndAdvance(&synth->opAdsr[op]);
             }
         }
 
         // Mix together the operators that are wired to output.
-        double finalSample = 0;
+        float finalSample = 0;
         for (int op = 0; op < FM_OPERATORS; op++) {
             finalSample += opSamples[op] * synth->opOutput[op];
             if (finalSample >= 1) {

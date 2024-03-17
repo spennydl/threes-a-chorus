@@ -413,7 +413,7 @@ static const double sawTable[] = { 0,
                                    0.976562500000000,
                                    0.984375000000000,
                                    0.992187500000000,
-                                   -1.000000000000000,
+                                   -0.992187500000000,
                                    -0.992187500000000,
                                    -0.984375000000000,
                                    -0.976562500000000,
@@ -545,7 +545,7 @@ static const double sawTable[] = { 0,
 double
 WaveTable_sample(WaveType type, double angle)
 {
-    double idxExact = (angle / PI2) * WT_N_SAMPLES;
+    double idxExact = (angle)*WT_N_SAMPLES;
     double idxLow;
     double idxFrac = modf(idxExact, &idxLow);
     int idx = idxLow;

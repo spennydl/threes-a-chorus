@@ -21,12 +21,37 @@
 /** A440 as a reference frequency. */
 #define A_440 440.0
 
+#define C2_HZ 65.41
+
 /** Notes. */
 typedef enum
 {
-    A4 = 0,
-    Bb4,
-    B4,
+    C2 = 0,
+    Db2,
+    D2,
+    Eb2,
+    E2,
+    F2,
+    Gb2,
+    G2,
+    Ab2,
+    A2,
+    Bb2,
+    B2,
+
+    C3,
+    Db3,
+    D3,
+    Eb3,
+    E3,
+    F3,
+    Gb3,
+    G3,
+    Ab3,
+    A3,
+    Bb3,
+    B3,
+
     C4,
     Db4,
     D4,
@@ -36,7 +61,36 @@ typedef enum
     Gb4,
     G4,
     Ab4,
-    A5
+    A4,
+    Bb4,
+    B4,
+
+    C5,
+    Db5,
+    D5,
+    Eb5,
+    E5,
+    F5,
+    Gb5,
+    G5,
+    Ab5,
+    A5,
+    Bb5,
+    B5,
+
+    C6,
+    Db6,
+    D6,
+    Eb6,
+    E6,
+    F6,
+    Gb6,
+    G6,
+    Ab6,
+    A6,
+    Bb6,
+    B6,
+    NOTE_NONE
 } Note;
 
 /** Operators available. Adding more is as simple as adding more values here. */
@@ -56,13 +110,13 @@ typedef struct
      * The CM ratio, or the ratio between this operators frequency and the base
      * frequency.
      */
-    double CmRatio;
+    float CmRatio;
 
     /**
      * How much this operator is mixed into the final output. Should be in
      * [0.0, 1.0].
      */
-    double outputStrength;
+    float outputStrength;
 
     /**
      * Which operators should act as input to this operator. All values should
@@ -71,13 +125,12 @@ typedef struct
      * If O is a vector of the output values of all operators, the input value
      * to this operator will be the dot product of V and algorithmConnections.
      */
-    double algorithmConnections[FM_OPERATORS];
+    float algorithmConnections[FM_OPERATORS];
 
     /** Type of the wave the operator should output. */
     WaveType waveType;
 
-    /** The operator's envelope. */
-    AdsrEnvelope adsr;
+    Note fixToNote;
 } OperatorParams;
 
 /** Parameters for the synthesizer. */
@@ -98,6 +151,8 @@ typedef struct
      * @brief Operator paramters.
      */
     OperatorParams opParams[FM_OPERATORS];
+
+    Env_Envelope opEnvelopes[FM_OPERATORS];
 } FmSynthParams;
 
 /**
@@ -106,42 +161,428 @@ typedef struct
  * Configures OPERATOR0 to output a simple sine wave at A440.
  */
 static const FmSynthParams FM_DEFAULT_PARAMS = {
-    .note = A4,
     .sampleRate = 44100,
     .opParams = { { .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
                     .outputStrength = 1.0,
-                    .algorithmConnections = { 0.0, 0.0, 0.0, 0.0 },
-                    .adsr = { .attackMs = 400,
-                              .decayMs = 100,
-                              .releaseMs = 800,
-                              .attackPeak = 0.75,
-                              .sustainLevel = 0.55 } },
-                  { .waveType = WAVETYPE_SINE,
-                    .CmRatio = 2.0 / 1.0,
+                    .algorithmConnections = { 0.0, 4.0, 0.0, 0.0 } },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 4.0,
                     .algorithmConnections = { 0 },
-                    .adsr = { .attackMs = 400,
-                              .decayMs = 100,
-                              .releaseMs = 800,
-                              .attackPeak = 0.75,
-                              .sustainLevel = 0.55 } },
+                  },
+                  { .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0 / 2.0,
+                    .algorithmConnections = { 0 } },
+                  { .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0 / 2.0,
+                    .algorithmConnections = { 0 } } },
+    .opEnvelopes = { { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                     { .gatePoint = 1.0,
+                       .repeatPoint = 0,
+                       .lengthMs = 1000,
+                       .fn = ENV_SWELL_FUNCTION },
+                     { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                     { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_ADSR_PLUCK_FUNCTION }
 
-                  { .waveType = WAVETYPE_SINE,
+    }
+};
+
+static const FmSynthParams FM_BELL_PARAMS = {
+    .sampleRate = 44100,
+    .opParams = { {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0,
+                    .outputStrength = 0.5,
+                    .algorithmConnections = { 0.0, 1.0, 0.0, 0.0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 3.5,
+                    .algorithmConnections = { 0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0,
+                    .outputStrength = 0.5,
+                    .algorithmConnections = { 0, 0, 0, 1.0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 3.5,
+                    .algorithmConnections = { 0, 0, 0, 7 },
+                  } },
+    .opEnvelopes = { { .gatePoint = 0.75,
+                       .repeatPoint = -1,
+                       .lengthMs = 1000,
+                       .fn = ENV_LINEARFALL_FUNCTION },
+                     { .gatePoint = 0.75,
+                       .repeatPoint = -1,
+                       .lengthMs = 1200,
+                       .fn = ENV_BELLSTRIKE_FUNCTION },
+                     { .gatePoint = 0.75,
+                       .repeatPoint = -1,
+                       .lengthMs = 1000,
+                       .fn = ENV_BELLSTRIKE_FUNCTION },
+                     { .gatePoint = 0.75,
+                       .repeatPoint = -1,
+                       .lengthMs = 1300,
+                       .fn = ENV_BELLSTRIKE_FUNCTION } }
+};
+
+static const FmSynthParams FM_CHIME_PARAMS = {
+    .sampleRate = 44100,
+    .opParams = { {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0 / 5,
+                    .fixToNote = E2,
+                    .outputStrength = 1.0,
+                    .algorithmConnections = { 0.0, 3.0, 0.0, 0.0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0,
+                    .algorithmConnections = { 0, 0.0, 2.0, 1.0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 9.0,
+                    .algorithmConnections = { 0, 0, 0, 0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 3.0 / 2.0,
+                    .algorithmConnections = { 0, 0, 0, 16 },
+                  } },
+    .opEnvelopes = { { .gatePoint = 0.85,
+                       .repeatPoint = -1,
+                       .lengthMs = 1000,
+                       .fn = ENV_LINEARFALL_FUNCTION },
+                     { .gatePoint = 0.75,
+                       .repeatPoint = -1,
+                       .lengthMs = 1200,
+                       .fn = ENV_BELLSTRIKE_FUNCTION },
+                     { .gatePoint = 0.75,
+                       .repeatPoint = -1,
+                       .lengthMs = 1000,
+                       .fn = ENV_BELLSTRIKE_FUNCTION },
+                     { .gatePoint = 1.0,
+                       .repeatPoint = 0,
+                       .lengthMs = 200,
+                       .fn = ENV_SWELL_FUNCTION } }
+};
+
+/**
+ * @brief "Ahhhh" parameters.
+ */
+static const FmSynthParams FM_AHH_PARAMS = {
+    .sampleRate = 44100,
+    .opParams = { {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0,
+                    .outputStrength = 0.5,
+                    .algorithmConnections = { 0.0, 0.0, 0.0, 12 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 11.0,
+                    .outputStrength = 0.3,
+                    .algorithmConnections = { 0.0, 0.0, 0.0, 24 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 18.0,
+                    .outputStrength = 0.2,
+                    .algorithmConnections = { 0, 0, 0, 21 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0,
+                    .algorithmConnections = { 0 },
+                  } },
+    .opEnvelopes = { { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                     { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_ADSR_AHH_FUNCTION },
+                     { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_ADSR_AHH_FUNCTION },
+                     { .gatePoint = 1,
+                       .repeatPoint = 0,
+                       .lengthMs = 1600,
+                       .fn = ENV_CONST_FUNCTION } }
+};
+
+static const FmSynthParams FM_BASS_PARAMS = {
+    .sampleRate = 44100,
+    .opParams = { {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0,
+                    .outputStrength = 0.8,
+                    .algorithmConnections = { 0.0, 0.0, 0.0, 4.0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 4.0,
+                    .outputStrength = 0.4,
+                    .algorithmConnections = { 0.0, 0.0, 3.4, 0.0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1,
+                    .algorithmConnections = { 0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 4.0,
+                    .algorithmConnections = { 0, 0, 0.8, 0 },
+                  } },
+    .opEnvelopes = { { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                     { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                     { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                     { .gatePoint = 0.9,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_EXP_FALLOFF_FUNCTION } }
+};
+
+static const FmSynthParams FM_YOI_PARAMS = {
+    .sampleRate = 44100,
+    .opParams = { {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0,
+                    .outputStrength = 0.51,
+                    .algorithmConnections = { 0.0, 18.0, 0.0, 0.0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0,
+                    .outputStrength = 0.68,
+                    .algorithmConnections = { 0.0, 0.0, 2.8, 0.0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SQUARE,
+                    .CmRatio = 1,
+                    .algorithmConnections = { 0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 4.0,
+                    .algorithmConnections = { 0 },
+                  } },
+    .opEnvelopes = { { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                     { .gatePoint = 0.1,
+                       .repeatPoint = 0.0,
+                       .lengthMs = 2000,
+                       .fn = ENV_PEAKFALL_FUNCTION },
+                     { .gatePoint = 0.5,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_PEAKFALL_FUNCTION },
+                     { .gatePoint = 0.9,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_EXP_FALLOFF_FUNCTION } }
+};
+
+static const FmSynthParams FM_BIG_PARAMS = {
+    .sampleRate = 44100,
+    .opParams = { {
+                    .waveType = WAVETYPE_SQUARE,
+                    .CmRatio = 1.0,
+                    .outputStrength = 0.8,
+                    .algorithmConnections = { 0.0, 0.0, 0.0, 3.8 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SQUARE,
+                    .CmRatio = 1.0 / 20.0,
+                    .outputStrength = 0.5,
+                    .algorithmConnections = { 0.0, 0.0, 4.5, 3 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SQUARE,
+                    .CmRatio = 1,
+                    .algorithmConnections = { 0, 0, 1.4, 0.0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0 / 2.0,
                     .algorithmConnections = { 0 },
-                    .adsr = { .attackMs = 400,
-                              .decayMs = 100,
-                              .releaseMs = 800,
-                              .attackPeak = 0.75,
-                              .sustainLevel = 0.55 } },
-                  { .waveType = WAVETYPE_SINE,
-                    .CmRatio = 1.0 / 2.0,
-                    .algorithmConnections = { 0 },
-                    .adsr = { .attackMs = 400,
-                              .decayMs = 100,
-                              .releaseMs = 800,
-                              .attackPeak = 0.75,
-                              .sustainLevel = 0.55 } } }
+                  } },
+    .opEnvelopes = { { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 1500,
+                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                     { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 1000,
+                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                     { .gatePoint = 0.8,
+                       .repeatPoint = 0.2,
+                       .lengthMs = 3000,
+                       .fn = ENV_SWELL_FUNCTION },
+                     { .gatePoint = 1.0,
+                       .repeatPoint = 0,
+                       .lengthMs = 7000,
+                       .fn = ENV_SWELL_FUNCTION }
+
+    }
+};
+
+static const FmSynthParams FM_BEEPBOOP_PARAMS = {
+    .sampleRate = 44100,
+    .opParams = { {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0,
+                    .outputStrength = 0.8,
+                    .algorithmConnections = { 0.0, 25, 0, 30.4 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0 / 100.0,
+                    .algorithmConnections = { 0.0, 0.0, 0, 0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0 / 9,
+                    .outputStrength = 0.15,
+                    .algorithmConnections = { 0, 0, 0, 2.4 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SQUARE,
+                    .CmRatio = 1.0 / 53,
+                    .algorithmConnections = { 0, 0, 0, 0 },
+                  } },
+    .opEnvelopes = { { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 1500,
+                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                     { .gatePoint = 1.0,
+                       .repeatPoint = 0,
+                       .lengthMs = 2345,
+                       .fn = ENV_SWELL_FUNCTION },
+                     { .gatePoint = 0.8,
+                       .repeatPoint = 0.2,
+                       .lengthMs = 1000,
+                       .fn = ENV_SWELL_FUNCTION },
+                     { .gatePoint = 0.9,
+                       .repeatPoint = 0.1,
+                       .lengthMs = 3200,
+                       .fn = ENV_SWELL_FUNCTION } }
+
+};
+
+static const FmSynthParams FM_SHINYDRONE_PARAMS = {
+    .sampleRate = 44100,
+    .opParams = { {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 3.0,
+                    .outputStrength = 0.5,
+                    .algorithmConnections = { 0.0, 2, 0, 0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 4.0,
+                    .algorithmConnections = { 0.0, 0.0, 0, 0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 6.0,
+                    .outputStrength = 0.5,
+                    .algorithmConnections = { 0, 0, 0, 2 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 2.5,
+                    .algorithmConnections = { 0, 0, 0, 2 },
+                  } },
+    .opEnvelopes = { { .gatePoint = 0.8,
+                       .repeatPoint = 0.2,
+                       .lengthMs = 1000,
+                       .fn = ENV_SWELL_FUNCTION },
+                     { .gatePoint = 0.8,
+                       .repeatPoint = 0.2,
+                       .lengthMs = 800,
+                       .fn = ENV_SWELL_FUNCTION },
+                     { .gatePoint = 0.9,
+                       .repeatPoint = 0.1,
+                       .lengthMs = 2500,
+                       .fn = ENV_SWELL_FUNCTION },
+                     { .gatePoint = 0.9,
+                       .repeatPoint = 0.1,
+                       .lengthMs = 3700,
+                       .fn = ENV_SWELL_FUNCTION } }
+
+};
+
+static const FmSynthParams FM_CHIRP_PARAMS = {
+    .sampleRate = 44100,
+    .opParams = { {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 2.0,
+                    .outputStrength = 0.2,
+                    .algorithmConnections = { 0.0, 3.6, 0, 0.0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 5.0,
+                    .outputStrength = 0.4,
+                    .algorithmConnections = { 0.0, 0.0, 0.0, 0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 5.0,
+                    .outputStrength = 0.15,
+                    .algorithmConnections = { 1.8, 0, 0, 0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 3.5,
+                    .algorithmConnections = { 0, 0, 0, 0 },
+                  } },
+    .opEnvelopes = { { .gatePoint = 0.2,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_PEAKFALL_FUNCTION },
+                     { .gatePoint = 0.3,
+                       .repeatPoint = -1,
+                       .lengthMs = 230,
+                       .fn = ENV_EXP_FALLOFF_FUNCTION },
+                     { .gatePoint = 0.2,
+                       .repeatPoint = -1,
+                       .lengthMs = 800,
+                       .fn = ENV_PEAKFALL_FUNCTION },
+                     { .gatePoint = 1.0,
+                       .repeatPoint = -1,
+                       .lengthMs = 600,
+                       .fn = ENV_CONST_FUNCTION } }
+
 };
 
 /**
@@ -176,6 +617,9 @@ Fm_createFmSynthesizer(const FmSynthParams* params);
 void
 Fm_destroySynthesizer(FmSynthesizer* synth);
 
+void
+Fm_setNote(FmSynthesizer* s, Note note);
+
 /**
  * @brief Trigger the ADSR and start playing the currently configured note.
  *
@@ -207,6 +651,11 @@ Fm_noteOff(FmSynthesizer* synth);
  */
 void
 Fm_updateParams(FmSynthesizer* synth, FmSynthParams* params);
+
+void
+Fm_updateOpParams(FmSynthesizer* s,
+                  FmOperator op,
+                  const OperatorParams* params);
 
 /**
  * @brief Generate a given number of frames into a given buffer.
