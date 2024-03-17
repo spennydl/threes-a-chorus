@@ -13,9 +13,15 @@ BeatSync_initialize();
 void
 BeatSync_cleanup();
 
+/**
+ * Set the path of the midi file to send to clients when they ask
+*/
 void
 BeatSync_setMidiToSend(char* path);
 
+/**
+ * Set a new BPM 
+*/
 void
 BeatSync_setBpm(int newBpm);
 

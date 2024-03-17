@@ -22,7 +22,8 @@ BeatSync_initialize()
     pthread_create(&beatRequestThread, NULL, &beatRequesterWorker, NULL);
 }
 
-void BeatSync_cleanup()
+void
+BeatSync_cleanup()
 {
     running = false;
     pthread_join(beatRequestThread, NULL);

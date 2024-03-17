@@ -70,7 +70,7 @@ clearAllEventNodes()
 static void makeLinkedListLoop()
 {
     if(currentMidiHead == NULL) {
-      printf("Warning: midi head is null when trying to make loop\n");
+      perror("Midi head is null when trying to make loop\n");
       return;
     }
 
@@ -91,79 +91,57 @@ static void parse_and_dump(struct midi_parser *parser, int channel, long long* t
   while (1) {
     status = midi_parse(parser);
     switch (status) {
-    case MIDI_PARSER_EOB:
-      puts("eob");
-      return;
 
-    case MIDI_PARSER_ERROR:
-      puts("error");
-      return;
+      case MIDI_PARSER_EOB:
+        return;
 
-    case MIDI_PARSER_INIT:
-      //puts("init");
-      break;
+      case MIDI_PARSER_ERROR:
+        printf("Error during midi parsing");
+        return;
 
-    case MIDI_PARSER_HEADER:
-      printf("header\n");
-      printf("  size: %d\n", parser->header.size);
-      printf("  format: %d [%s]\n", parser->header.format, midi_file_format_name(parser->header.format));
-      printf("  tracks count: %d\n", parser->header.tracks_count);
-      printf("  time division: %d\n", parser->header.time_division);
-      channelToPlayWith = channel % parser->header.tracks_count;
-      ppq = parser->header.time_division;
-      break;
+      case MIDI_PARSER_HEADER:
+        printf("header\n");
+        printf("  size: %d\n", parser->header.size);
+        printf("  format: %d [%s]\n", parser->header.format, midi_file_format_name(parser->header.format));
+        printf("  tracks count: %d\n", parser->header.tracks_count);
+        printf("  time division: %d\n", parser->header.time_division);
 
-    case MIDI_PARSER_TRACK:
-      //puts("track");
-      printf("  length: %d\n", parser->track.size);
-      break;
-
-    case MIDI_PARSER_TRACK_MIDI:
-
-      trackLengths[parser->midi.channel] += parser->vtime;
-
-
-      if(parser->midi.channel != channelToPlayWith) {
+        // TODO: Make it so if the channel length is 0 then  we don't play with it
+        // Probably later on and not in this function
+        channelToPlayWith = channel % parser->header.tracks_count;
+        ppq = parser->header.time_division;
         break;
-      }
-      struct MidiEventNode* eventNode = malloc(sizeof(struct MidiEventNode));
-      eventNode->status = parser->midi.status;
-      eventNode->vtime = parser->vtime;
-      eventNode->param1 = parser->midi.param1;
-      eventNode->param2 = parser->midi.param2;
-      eventNode->next = NULL;
-      eventNode->channel = parser->midi.channel;
 
-      if(currentMidiHead == NULL)
-      {
-        currentMidiHead = eventNode;
-      }
-      else
-      {
-        prev->next = eventNode;
-      }
+      case MIDI_PARSER_TRACK_MIDI:
 
-      prev = eventNode;
+        // Keep track of longest track for adding a buffer at the end
+        trackLengths[parser->midi.channel] += parser->vtime;
 
-      break;
+        if(parser->midi.channel != channelToPlayWith) {
+          break;
+        }
 
-    case MIDI_PARSER_TRACK_META:
-      break;
-      printf("track-meta\n");
-      printf("  time: %lld\n", parser->vtime);
-      printf("  type: %d [%s]\n", parser->meta.type, midi_meta_name(parser->meta.type));
-      printf("  length: %d\n", parser->meta.length);
-      break;
+        struct MidiEventNode* eventNode = malloc(sizeof(struct MidiEventNode));
+        eventNode->status = parser->midi.status;
+        eventNode->vtime = parser->vtime;
+        eventNode->param1 = parser->midi.param1;
+        eventNode->param2 = parser->midi.param2;
+        eventNode->channel = parser->midi.channel;
+        eventNode->next = NULL;
 
-    case MIDI_PARSER_TRACK_SYSEX:
-      break;
-      puts("track-sysex");
-      printf("  time: %lld\n", parser->vtime);
-      break;
+        if(currentMidiHead == NULL) {
+          currentMidiHead = eventNode;
+        }
+        else {
+          prev->next = eventNode;
+        }
 
-    default:
-      printf("unhandled state: %d\n", status);
-      return;
+        prev = eventNode;
+        break;
+
+      default:
+        printf("unhandled midi state: %d\n", status);
+        return;
     }
   }
 }
@@ -171,7 +149,6 @@ static void parse_and_dump(struct midi_parser *parser, int channel, long long* t
 static int
 parseMidiFileChannel(const char *path, int channel)
 {
-
   struct stat st;
 
   if (stat(path, &st)) {
@@ -210,6 +187,7 @@ parseMidiFileChannel(const char *path, int channel)
   long long padding = longestTrackLength - trackLengths[channelToPlayWith];
   struct MidiEventNode* current = currentMidiHead;
 
+  // Create padding node and add to the end of the midi nodes
   struct MidiEventNode* paddingNode = malloc(sizeof(struct MidiEventNode));
   paddingNode->status = MIDI_STATUS_NOTE_OFF;
   paddingNode->vtime = padding;
@@ -296,8 +274,7 @@ midiPlayerWorker(void* p)
     (void)p;
     timeUntilNextEvent = 0;
 
-    while(running)
-    {
+    while(running) {
         if(!readyToPlay || currentNode == NULL || nsLeft <= 0) {
             continue;
         }
@@ -316,8 +293,7 @@ midiPlayerWorker(void* p)
             Timeutils_sleepForNs(chunkOfTime);
         }
         else {
-            if(currentNode->status == MIDI_STATUS_NOTE_ON)
-            {
+            if(currentNode->status == MIDI_STATUS_NOTE_ON) {
                 // C2 = 0 for fm
                 // C2 = 36 for other
                 // So the note we want to  play is - 36 away
@@ -329,8 +305,7 @@ midiPlayerWorker(void* p)
                 FmPlayer_controlNote(NOTE_CTRL_NOTE_ON);
                 
             }
-            else if(currentNode->status == MIDI_STATUS_NOTE_OFF)
-            {
+            else if(currentNode->status == MIDI_STATUS_NOTE_OFF) {
                 FmPlayer_controlNote(NOTE_CTRL_NOTE_OFF);
             }
             

@@ -18,7 +18,7 @@ main(int argc, char** argv)
     }
 
     int channel = atoi(argv[2]);
-;
+
     Tcp_initializeTcpClient(argv[1]);
     FmPlayer_initialize(&FM_DEFAULT_PARAMS);
 
