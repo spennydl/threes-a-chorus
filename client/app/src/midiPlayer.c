@@ -250,6 +250,8 @@ MidiPlayer_playMidiFile(char* path, int channelNumber)
       current = current->next;
     }
 
+    Timeutils_sleepForNs(beatOffsetInNs);
+
     currentNode = current;
 
     readyToPlay = true;
