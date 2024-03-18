@@ -289,7 +289,7 @@ midiPlayerWorker(void* p)
             nsLeft = 0;
         }
 
-        long long chunkOfTime = (long long)((1000000 * 60000.0 / (bpm * ppq)));
+        long long chunkOfTime = (long long)((60000000000 / (bpm * ppq)));
 
         //printf("%ld - %lld\n", timeUntilNextEvent, chunkOfTime);
 
