@@ -242,6 +242,8 @@ MidiPlayer_playMidiFile(char* path, int channelNumber)
     struct MidiEventNode* current = currentMidiHead;
     long long beatOffsetInNs = nsPerBeat() * beatOffset;
 
+    long long timeSinceStart = Timeutils_getTimeInNs();
+
     printf("Beat offset %lld or %lld in ns\n", beatOffset, beatOffsetInNs);
 
     while(beatOffsetInNs > nsPerBeat()) {
@@ -250,7 +252,9 @@ MidiPlayer_playMidiFile(char* path, int channelNumber)
       current = current->next;
     }
 
-    Timeutils_sleepForNs(beatOffsetInNs);
+    timeSinceStart = Timeutils_getTimeInNs() - timeSinceStart;
+
+    Timeutils_sleepForNs(beatOffsetInNs - timeSinceStart);
 
     currentNode = current;
 
