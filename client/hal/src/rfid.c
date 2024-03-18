@@ -18,7 +18,7 @@
  *      - The LSB is always set to 0."
  *
  * @param regAddr The register address to access.
- * @param mode Specifies read or write.
+ * @param mode Specifies read ('r') or write ('w').
  * @return byte The formatted register address.
  */
 static byte
@@ -52,11 +52,6 @@ Rfid_writeReg(byte regAddr, byte value);
 static void
 Rfid_setBitmask(byte regAddr, byte bitmask);
 
-//  * ====================   (1)   =================   (2)   ==============
-//  * |    C Program     | ------> | PCD (MFRC522) | ------> | PICC (MF1) |
-//  * | transceiveBuffer | <------ |  FIFO buffer  | <------ |    UID     |
-//  * ====================   (4)   =================   (3)   ==============
-
 /**
  * Transmit a PICC command through the PCD's FIFO buffer, then receive the
  * PICC's response from the PCD's FIFO buffer.
@@ -73,6 +68,11 @@ Rfid_setBitmask(byte regAddr, byte bitmask);
 static int
 Rfid_transceive(byte* transceiveBuffer, int bufferLen, int* numRxBits);
 
+//  * ====================   (1)   =================   (2)   ==============
+//  * |    C Program     | ------> | PCD (MFRC522) | ------> | PICC (MF1) |
+//  * | transceiveBuffer | <------ |  FIFO buffer  | <------ |    UID     |
+//  * ====================   (4)   =================   (3)   ==============
+
 /**
  * Perform a checksum according to Section 2 of AN10927 MIFARE Document.
  * We employ this checksum as a final check to verify a UID has been transmitted
@@ -87,7 +87,7 @@ Rfid_transceive(byte* transceiveBuffer, int bufferLen, int* numRxBits);
 static int
 Rfid_performChecksum(byte* uid);
 
-////////////////////// Prototype Implementations /////////////////////////
+////////////////////// Prototype Implementations /////////////////////////////
 static byte
 Rfid_formatRegAddr(byte regAddr, const char mode)
 {
@@ -153,78 +153,97 @@ Rfid_transceive(byte* transceiveBuffer, int bufferLen, int* numRxBits)
     // Set StartSend=1 == begin transceiving
     Rfid_setBitmask(PCD_BIT_FRAMING_REG, 0x80);
 
-    // Wait until the command completes. We do this by polling and checking if
-    // the COM_IRQ_REG has a certain bit pattern that signifies it's been
-    // interrupted by a tag read.
+    // Section 9.3.1.5 of MFRC522 datasheet:
+    // The 5th bit in COM_IRQ_REG changes to a 1 when the receiver has detected
+    // the end of a valid data stream (i.e. a tag's response).
 
-    // More specifically, it checks if either
-    // the RxIRq bit has been set (receiver has detected end of a valid data
-    // stream), or the IdleIRq bit has been set (if a command terminates).
+    // So we set a generous deadline of 50ms for a tag to receive and respond
+    // to our command. During these 50ms, we repeatedly check if COM_IRQ_REG's
+    // 5th bit has been set to 1 using the rxIrqBitmask 0x20 (0010 0000).
 
-    byte waitIrq = 0x30;
+    // TODO: IMPORTANT!!! You acnnot sleep for 36ms, you have to repeatedly
+    // poll ComIrqReg the whole time or else you'll end up infinite looping.
+    // basically if you don't repeatedly poll, you'll never reach the
+    // rxValidData = true part.
+    byte rxIrqBitmask = 0x30;
     long long deadline = Timeutils_getTimeInMs() + 36;
 
-    bool completed = false;
+    bool rxValidData = false;
     do {
         byte n = Rfid_readReg(PCD_COM_IRQ_REG);
-        if (n & waitIrq) {
-            completed = true;
+        if (n & rxIrqBitmask) {
+            rxValidData = true;
             break;
         }
-        // 0x01 is the bit pattern that signifies a timer-based interrupt, i.e.
-        // no tag found in the time limit. (TODO: diff btwn this and <
-        // deadline?)
-        if (n & 0x01) {
-            return PICC_NO_TAG_ERR;
-        }
+
+        // if (n & 0x01) {
+        //     // TODO: This error condition is repeatedly being reached,
+        //     // resulting in an infinite loop.
+        //     puts("n & 0x01");
+        //     return PICC_NO_TAG_ERR;
+        // }
+
     } while (Timeutils_getTimeInMs() < deadline);
 
-    if (!completed) {
-        // puts("!completed");
+    if (!rxValidData) {
+        puts("!rxValidData");
         return PICC_NO_TAG_ERR;
     }
 
-    // Check if the command produced errors.
+    // Check if the command produced any errors. The bitmask 0xFF captures
+    // many different error types, ranging from FIFO buffer overflow to
+    // internal error checking failures.
     byte errorRegValue = Rfid_readReg(PCD_ERROR_REG);
-    if (errorRegValue &
-        0x13) { // TODO: 0x13 does not check for collisions. Alternate: 0x1D.
+    if (errorRegValue & 0x13) {
+        puts("errorReg");
         return PICC_OTHER_ERR;
     }
 
     // Determine how many bytes are in the FIFO buffer.
     byte numFIFOBytes = Rfid_readReg(PCD_FIFO_LEVEL_REG);
-    int lastBits = Rfid_readReg(PCD_CONTROL_REG) & 0x07;
+    *numRxBits = numFIFOBytes * 8;
 
-    // printf("numFIFOBytes: %x\n", numFIFOBytes);
+    // TODO This isn't being reached.
+    printf("numFIFOBytes: %d\n", numFIFOBytes);
 
-    // Basically analogous to checking 7 vs 8 valid bits.
-    if (lastBits) {
-        *numRxBits = (numFIFOBytes - 1) * 8 + lastBits;
-        // seems like whenever this happens, we get the FIFO_ERR
-        // puts("lastBits True");
-    } else {
-        *numRxBits = numFIFOBytes * 8; // 2*8. *8 because 8 bits in 1 byte.
-                                       // numRxBits is in # bits.
-        // puts("lastBits False");
-    }
+    // // Basically analogous to checking 7 vs 8 valid bits.
+    // if (lastBits) {
+    //     *numRxBits = (numFIFOBytes - 1) * 8 + lastBits;
+    //     // seems like whenever this happens, we get the FIFO_ERR
+    //     puts("lastBits True");
+    // } else {
+    //     *numRxBits = numFIFOBytes * 8; // 2*8. *8 because 8 bits in 1
+    //     byte.
+    //                                    // numRxBits is in # bits.
+    //     puts("lastBits False");
+    // }
 
-    if (numFIFOBytes == 0) {
-        numFIFOBytes = 1;
-        // puts("numFIFOBytes = 0");
-    }
-    if (numFIFOBytes > NUM_BYTES_IN_PICC_BLOCK) {
-        numFIFOBytes = NUM_BYTES_IN_PICC_BLOCK;
-        // puts("numFIFOBytes > 16");
-    }
+    // if (numFIFOBytes == 0) {
+    //     numFIFOBytes = 1;
+    //     puts("numFIFOBytes = 0");
+    // }
+    // if (numFIFOBytes > NUM_BYTES_IN_PICC_BLOCK) {
+    //     numFIFOBytes = NUM_BYTES_IN_PICC_BLOCK;
+    //     puts("numFIFOBytes > 16");
+    // }
 
-    // printf("Final numFIFOBytes: %x\n", numFIFOBytes);
-
-    // Retrieve the data from the FIFO buffer. The data is multiple bytes long.
-    // Section 8.3.1 of MFRC522 datasheet:
-    // Every time we read from FIFO_DATA_REG, we read 1 byte, and the internal
-    // FIFO buffer pointer is decremented automatically.
+    // Retrieve the data from the FIFO buffer. The data is multiple bytes
+    // long. Section 8.3.1 of MFRC522 datasheet: Every time we read from
+    // FIFO_DATA_REG, we read 1 byte, and the internal FIFO buffer pointer
+    // is decremented automatically.
     for (int i = 0; i < numFIFOBytes; i++) {
         transceiveBuffer[i] = Rfid_readReg(PCD_FIFO_DATA_REG);
+    }
+
+    // Check if we received an incomplete data stream.
+    // Section 9.3.1.13 RxLastBits[2:0] indicates the number of valid bits
+    // in the last received byte. If this value is 000, the whole byte is
+    // valid.
+    bool invalidByte = Rfid_readReg(PCD_CONTROL_REG) & 0x07;
+    if (invalidByte) {
+        puts("Invalid Byte");
+        fflush(stdout);
+        return PICC_BAD_FIFO_READ_ERR;
     }
 
     return PICC_OK;
@@ -240,11 +259,12 @@ Rfid_performChecksum(byte* uidBuffer)
         checksum ^= uidBuffer[i];
     }
 
-    // Verify that the checksum is equal to the BCC, which is the last byte in
-    // the uidBuffer.
+    // Verify that the checksum is equal to the BCC, which is the last byte
+    // in the uidBuffer.
     if (checksum != uidBuffer[NUM_BYTES_IN_PICC_UID]) {
         return PICC_CHECKSUM_ERR;
     }
+
     return PICC_OK;
 }
 
@@ -255,21 +275,16 @@ Rfid_init(void)
     // Init SPI bus.
     Spi_init(SPI_DEV_BUS1_CS0);
 
-    // Reset regs.
-    Rfid_writeReg(PCD_TX_MODE_REG, 0x00);
-    Rfid_writeReg(PCD_RX_MODE_REG, 0x00);
-    Rfid_writeReg(PCD_MOD_WIDTH_REG, 0x26);
-
     // Set timer regs.
     Rfid_writeReg(PCD_T_MODE_REG, 0x80);
     Rfid_writeReg(PCD_T_PRESCALER_REG, 0xA9);
     Rfid_writeReg(PCD_T_RELOAD_REG_H, 0x03);
     Rfid_writeReg(PCD_T_RELOAD_REG_L, 0xE8);
 
-    // Set mode regs (and turn antenna on).
-    Rfid_writeReg(PCD_TX_ASK_REG, 0x40);
-    Rfid_writeReg(PCD_MODE_REG, 0x3D);
-    Rfid_setBitmask(PCD_TX_CONTROL_REG, 0x03);
+    // Activate the RFID.
+    Rfid_writeReg(PCD_MODE_REG, 0x3D);         // TODO prob only need bit 5
+    Rfid_writeReg(PCD_TX_ASK_REG, 0x40);       // Force 100% ASK.
+    Rfid_setBitmask(PCD_TX_CONTROL_REG, 0x03); // Turn antenna on.
 }
 
 void
@@ -301,9 +316,9 @@ Rfid_searchForTag(void)
     }
 
     if (numRxBits != 16) { // 16 *BITS*, i.e. 2 bytes.
-        // puts("RESULT LEN IS WRONG!");
-        return PICC_BAD_FIFO_READ_ERR; // TODO rename, maybe more of a timing
-                                       // error than anything
+        puts("RESULT LEN IS WRONG!");
+        return PICC_BAD_FIFO_READ_ERR; // TODO rename, maybe more of a
+                                       // timing error than anything
     }
 
     return status;
@@ -312,26 +327,27 @@ Rfid_searchForTag(void)
 int
 Rfid_getTagUid(byte* buffer)
 {
-    int numRxBits;
+    puts("We goes in");
+
+    int numRxBits = 0;
 
     Rfid_writeReg(PCD_BIT_FRAMING_REG, 0x00);
 
     buffer[0] = PICC_ANTICOLLISION_CMD_A;
     buffer[1] = PICC_ANTICOLLISION_CMD_B;
 
-    // TODO:
-    // This *always* returns 40 bits exactly? It always
-    // needs to call transceive only literally once? Not convinced...
     int status = Rfid_transceive(buffer, 2, &numRxBits);
 
     // TODO: Magic number, also maybe a new ERR type
     if (numRxBits != 40) {
+        printf("numRxBits: %d\n", numRxBits); // gets stuck in here.
         return PICC_BAD_FIFO_READ_ERR;
     }
 
     if (status == PICC_OK) {
         int checksumResult = Rfid_performChecksum(buffer);
         if (checksumResult != PICC_OK) {
+            puts("checksumResult != PICC_OK");
             return PICC_CHECKSUM_ERR;
         }
     }

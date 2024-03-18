@@ -21,37 +21,39 @@ printByteArray(byte* tagData)
     }
     printf(" }");
     puts("");
+    fflush(stdout);
 }
 
 int
 Rfid_example(void)
 {
     Rfid_init();
-    Rfid_printFirmwareVersion(); // for good luck :)
-
-    puts("When testing, please perform the following:\n");
-    puts("1) Obtain a 4-byte UID, without error, from the white card tag.");
-    puts("2) Swipe the tag at least twice, to ensure it returns the same UID.");
-    puts("3) Repeat for the blue key fob tag.");
-    puts("4) Reboot the BeagleBone and repeat steps 1-3.");
-
-    puts("");
-    puts("Searching for a tag...");
-    puts("");
 
     while (true) {
         status = Rfid_searchForTag();
+        printf("status: %d\n", status);
+        if (status != PICC_OK) {
+            // TODO if you don't sleep like this then it gets messed up pretty
+            // often
+            // Timeutils_sleepForMs(1000);
+        }
 
         if (status == PICC_OK) {
             do {
                 status = Rfid_getTagUid(tagData);
             } while (status != PICC_OK);
-            break;
+
+            puts("Tag found. Printing tag UID...");
+            printByteArray(tagData);
         }
         // Else, keep searching.
+
+        // TODO: sleeping is probably the biggest deterrent of the infinite loop
+        // error, but you can still run into inf loop errors by waving it abck &
+        // forth. 1000ms feels pretty safe (99% chance of being fine), 100ms
+        // can still run into errors.
+        Timeutils_sleepForMs(1000);
     }
-    puts("Tag found. Printing tag UID...");
-    printByteArray(tagData);
     puts("Ending program...");
 
     Rfid_shutdown();

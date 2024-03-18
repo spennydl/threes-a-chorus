@@ -83,6 +83,7 @@
 /*
  * Error Codes
  */
+// TODO: Rename these to RFID errors (not PICC exclusive).
 #define PICC_OK 0
 #define PICC_NO_TAG_ERR 1
 #define PICC_BAD_FIFO_READ_ERR 2
@@ -113,12 +114,21 @@ int
 Rfid_searchForTag(void);
 
 /**
- * Retrieve the UID of a PICC, and store it in a buffer.
+ * Retrieve the UID of a PICC following a successful REQA command.
  * @param buffer The buffer to store the UID in.
  * @return int A PICC status code.
  */
 int
 Rfid_getTagUid(byte* buffer);
+
+/**
+ * Get the current tag's ID, which we define as the first byte of the UID.
+ * For our project, merely the first byte is enough to distinguish our tags.
+ * @return byte The first byte of the UID of the tag that the module is
+ * currently reading, or 0xFF if no tag is currently being read.
+ */
+byte
+Rfid_getCurrentTagId();
 
 /**
  * Print the firmware version of an MFRC522, which can be 0x91 or 0x92.
