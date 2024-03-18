@@ -139,6 +139,15 @@ static void parse_and_dump(struct midi_parser *parser, int channel, long long* t
         prev = eventNode;
         break;
 
+      case MIDI_PARSER_TRACK:
+        break;
+
+      case MIDI_PARSER_TRACK_SYSEX:
+        break;
+
+      case MIDI_PARSER_TRACK_META:
+        break;
+
       default:
         printf("unhandled midi state: %d\n", status);
         return;
