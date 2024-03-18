@@ -1,4 +1,8 @@
 #include "hal/timeutils.h"
+#include <time.h>
+
+#define NS_PER_SECOND 1000000000
+#define NS_PER_MS (1000 * 1000)
 
 long long
 Timeutils_getTimeInMs(void)
@@ -29,24 +33,15 @@ Timeutils_getTimeInNs(void)
 void
 Timeutils_sleepForMs(long long delayInMs)
 {
-    const long long NS_PER_MS = 1000 * 1000;
-    const long long NS_PER_SECOND = 1000000000;
     long long delayNs = delayInMs * NS_PER_MS;
-
-    int seconds = delayNs / NS_PER_SECOND;
-    int nanoseconds = delayNs % NS_PER_SECOND;
-
-    struct timespec reqDelay = { seconds, nanoseconds };
-    nanosleep(&reqDelay, (struct timespec*)NULL);
+    Timeutils_sleepForNs(delayNs);
 }
 
 void
-Timeutils_sleepForNs(long long delayInNs)
+Timeutils_sleepForNs(long long delayNs)
 {
-    const long long NS_PER_SECOND = 1000000000;
-
-    int seconds = delayInNs / NS_PER_SECOND;
-    int nanoseconds = delayInNs % NS_PER_SECOND;
+    int seconds = delayNs / NS_PER_SECOND;
+    int nanoseconds = delayNs % NS_PER_SECOND;
 
     struct timespec reqDelay = { seconds, nanoseconds };
     nanosleep(&reqDelay, (struct timespec*)NULL);

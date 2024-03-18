@@ -1,6 +1,7 @@
 // Main program to build the application
 // Has main(); does initialization and cleanup and perhaps some basic logic.
 
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,7 +13,7 @@
 #include <unistd.h>
 
 int
-main(int argc, char** argv)
+main(void)
 {
     if (argc < 3) {
         printf("You must specify the server ip (192.168.7.1), midi channel");
@@ -45,6 +46,7 @@ main(int argc, char** argv)
                 break;
             }
         }
+    }
 
     NetMidi_stop();
     FmPlayer_close();
