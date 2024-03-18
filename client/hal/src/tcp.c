@@ -96,6 +96,7 @@ Tcp_requestFile(char* fileName)
     pthread_mutex_lock(&tcpLock);
     Tcp_sendMessage(SEND_FILE);
     char fileSizeBuffer[MAX_BUFFER_SIZE];
+    
     Tcp_receiveMessage(fileSizeBuffer);
     int fileSize = atoi(fileSizeBuffer);
     
