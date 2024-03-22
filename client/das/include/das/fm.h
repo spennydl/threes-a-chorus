@@ -12,6 +12,7 @@
  */
 #pragma once
 
+#include "com/pwl.h"
 #include "das/envelope.h"
 #include "das/wavetable.h"
 #include <stdbool.h>
@@ -180,19 +181,19 @@ static const FmSynthParams FM_DEFAULT_PARAMS = {
     .opEnvelopes = { { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                       .fn = PWL_ADSR_PLUCK_FUNCTION },
                      { .gatePoint = 1.0,
                        .repeatPoint = 0,
                        .lengthMs = 1000,
-                       .fn = ENV_SWELL_FUNCTION },
+                       .fn = PWL_SWELL_FUNCTION },
                      { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                       .fn = PWL_ADSR_PLUCK_FUNCTION },
                      { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_ADSR_PLUCK_FUNCTION }
+                       .fn = PWL_ADSR_PLUCK_FUNCTION }
 
     }
 };
@@ -224,19 +225,19 @@ static const FmSynthParams FM_BELL_PARAMS = {
     .opEnvelopes = { { .gatePoint = 0.75,
                        .repeatPoint = -1,
                        .lengthMs = 1000,
-                       .fn = ENV_LINEARFALL_FUNCTION },
+                       .fn = PWL_LINEARFALL_FUNCTION },
                      { .gatePoint = 0.75,
                        .repeatPoint = -1,
                        .lengthMs = 1200,
-                       .fn = ENV_BELLSTRIKE_FUNCTION },
+                       .fn = PWL_BELLSTRIKE_FUNCTION },
                      { .gatePoint = 0.75,
                        .repeatPoint = -1,
                        .lengthMs = 1000,
-                       .fn = ENV_BELLSTRIKE_FUNCTION },
+                       .fn = PWL_BELLSTRIKE_FUNCTION },
                      { .gatePoint = 0.75,
                        .repeatPoint = -1,
                        .lengthMs = 1300,
-                       .fn = ENV_BELLSTRIKE_FUNCTION } }
+                       .fn = PWL_BELLSTRIKE_FUNCTION } }
 };
 
 static const FmSynthParams FM_CHIME_PARAMS = {
@@ -266,19 +267,19 @@ static const FmSynthParams FM_CHIME_PARAMS = {
     .opEnvelopes = { { .gatePoint = 0.85,
                        .repeatPoint = -1,
                        .lengthMs = 1000,
-                       .fn = ENV_LINEARFALL_FUNCTION },
+                       .fn = PWL_LINEARFALL_FUNCTION },
                      { .gatePoint = 0.75,
                        .repeatPoint = -1,
                        .lengthMs = 1200,
-                       .fn = ENV_BELLSTRIKE_FUNCTION },
+                       .fn = PWL_BELLSTRIKE_FUNCTION },
                      { .gatePoint = 0.75,
                        .repeatPoint = -1,
                        .lengthMs = 1000,
-                       .fn = ENV_BELLSTRIKE_FUNCTION },
+                       .fn = PWL_BELLSTRIKE_FUNCTION },
                      { .gatePoint = 1.0,
                        .repeatPoint = 0,
                        .lengthMs = 200,
-                       .fn = ENV_SWELL_FUNCTION } }
+                       .fn = PWL_SWELL_FUNCTION } }
 };
 
 /**
@@ -312,19 +313,19 @@ static const FmSynthParams FM_AHH_PARAMS = {
     .opEnvelopes = { { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                       .fn = PWL_ADSR_PLUCK_FUNCTION },
                      { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_ADSR_AHH_FUNCTION },
+                       .fn = PWL_ADSR_AHH_FUNCTION },
                      { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_ADSR_AHH_FUNCTION },
+                       .fn = PWL_ADSR_AHH_FUNCTION },
                      { .gatePoint = 1,
                        .repeatPoint = 0,
                        .lengthMs = 1600,
-                       .fn = ENV_CONST_FUNCTION } }
+                       .fn = PWL_CONST_FUNCTION } }
 };
 
 static const FmSynthParams FM_BASS_PARAMS = {
@@ -354,19 +355,19 @@ static const FmSynthParams FM_BASS_PARAMS = {
     .opEnvelopes = { { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                       .fn = PWL_ADSR_PLUCK_FUNCTION },
                      { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                       .fn = PWL_ADSR_PLUCK_FUNCTION },
                      { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                       .fn = PWL_ADSR_PLUCK_FUNCTION },
                      { .gatePoint = 0.9,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_EXP_FALLOFF_FUNCTION } }
+                       .fn = PWL_EXP_FALLOFF_FUNCTION } }
 };
 
 static const FmSynthParams FM_YOI_PARAMS = {
@@ -396,19 +397,19 @@ static const FmSynthParams FM_YOI_PARAMS = {
     .opEnvelopes = { { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                       .fn = PWL_ADSR_PLUCK_FUNCTION },
                      { .gatePoint = 0.1,
                        .repeatPoint = 0.0,
                        .lengthMs = 2000,
-                       .fn = ENV_PEAKFALL_FUNCTION },
+                       .fn = PWL_PEAKFALL_FUNCTION },
                      { .gatePoint = 0.5,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_PEAKFALL_FUNCTION },
+                       .fn = PWL_PEAKFALL_FUNCTION },
                      { .gatePoint = 0.9,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_EXP_FALLOFF_FUNCTION } }
+                       .fn = PWL_EXP_FALLOFF_FUNCTION } }
 };
 
 static const FmSynthParams FM_BIG_PARAMS = {
@@ -438,19 +439,19 @@ static const FmSynthParams FM_BIG_PARAMS = {
     .opEnvelopes = { { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 1500,
-                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                       .fn = PWL_ADSR_PLUCK_FUNCTION },
                      { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 1000,
-                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                       .fn = PWL_ADSR_PLUCK_FUNCTION },
                      { .gatePoint = 0.8,
                        .repeatPoint = 0.2,
                        .lengthMs = 3000,
-                       .fn = ENV_SWELL_FUNCTION },
+                       .fn = PWL_SWELL_FUNCTION },
                      { .gatePoint = 1.0,
                        .repeatPoint = 0,
                        .lengthMs = 7000,
-                       .fn = ENV_SWELL_FUNCTION }
+                       .fn = PWL_SWELL_FUNCTION }
 
     }
 };
@@ -482,19 +483,19 @@ static const FmSynthParams FM_BEEPBOOP_PARAMS = {
     .opEnvelopes = { { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 1500,
-                       .fn = ENV_ADSR_PLUCK_FUNCTION },
+                       .fn = PWL_ADSR_PLUCK_FUNCTION },
                      { .gatePoint = 1.0,
                        .repeatPoint = 0,
                        .lengthMs = 2345,
-                       .fn = ENV_SWELL_FUNCTION },
+                       .fn = PWL_SWELL_FUNCTION },
                      { .gatePoint = 0.8,
                        .repeatPoint = 0.2,
                        .lengthMs = 1000,
-                       .fn = ENV_SWELL_FUNCTION },
+                       .fn = PWL_SWELL_FUNCTION },
                      { .gatePoint = 0.9,
                        .repeatPoint = 0.1,
                        .lengthMs = 3200,
-                       .fn = ENV_SWELL_FUNCTION } }
+                       .fn = PWL_SWELL_FUNCTION } }
 
 };
 
@@ -525,19 +526,19 @@ static const FmSynthParams FM_SHINYDRONE_PARAMS = {
     .opEnvelopes = { { .gatePoint = 0.8,
                        .repeatPoint = 0.2,
                        .lengthMs = 1000,
-                       .fn = ENV_SWELL_FUNCTION },
+                       .fn = PWL_SWELL_FUNCTION },
                      { .gatePoint = 0.8,
                        .repeatPoint = 0.2,
                        .lengthMs = 800,
-                       .fn = ENV_SWELL_FUNCTION },
+                       .fn = PWL_SWELL_FUNCTION },
                      { .gatePoint = 0.9,
                        .repeatPoint = 0.1,
                        .lengthMs = 2500,
-                       .fn = ENV_SWELL_FUNCTION },
+                       .fn = PWL_SWELL_FUNCTION },
                      { .gatePoint = 0.9,
                        .repeatPoint = 0.1,
                        .lengthMs = 3700,
-                       .fn = ENV_SWELL_FUNCTION } }
+                       .fn = PWL_SWELL_FUNCTION } }
 
 };
 
@@ -569,19 +570,19 @@ static const FmSynthParams FM_CHIRP_PARAMS = {
     .opEnvelopes = { { .gatePoint = 0.2,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_PEAKFALL_FUNCTION },
+                       .fn = PWL_PEAKFALL_FUNCTION },
                      { .gatePoint = 0.3,
                        .repeatPoint = -1,
                        .lengthMs = 230,
-                       .fn = ENV_EXP_FALLOFF_FUNCTION },
+                       .fn = PWL_EXP_FALLOFF_FUNCTION },
                      { .gatePoint = 0.2,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = ENV_PEAKFALL_FUNCTION },
+                       .fn = PWL_PEAKFALL_FUNCTION },
                      { .gatePoint = 1.0,
                        .repeatPoint = -1,
                        .lengthMs = 600,
-                       .fn = ENV_CONST_FUNCTION } }
+                       .fn = PWL_CONST_FUNCTION } }
 
 };
 

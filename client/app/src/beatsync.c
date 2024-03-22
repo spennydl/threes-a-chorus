@@ -6,8 +6,8 @@
 #include <unistd.h>
 
 #include "beatsync.h"
+#include "com/timeutils.h"
 #include "hal/tcp.h"
-#include "hal/timeutils.h"
 #include "midiPlayer.h"
 
 static bool running = false;

@@ -1,7 +1,9 @@
 #include "sensory.h"
+#include "com/pwl.h"
+#include "com/timeutils.h"
 #include "hal/accel.h"
 #include "hal/adc.h"
-#include "hal/timeutils.h"
+#include "hal/button.h"
 #include "hal/ultrasonic.h"
 #include <math.h>
 #include <pthread.h>
@@ -11,111 +13,318 @@
 #define NS_BETWEEN_SAMPLES (10000000)
 
 // threshold between "gentle" and "rough" handling
-#define ACCEL_HIGH_THRESHOLD 0.2
 #define CUBE_ROOT_0_25 0.62996052494
-// 100ms debounce on the way up?
-#define ACCEL_LOHI_UP_THRESHOLD 10
-// long debounce (1.5s) on the way down
-#define ACCEL_LOHI_DOWN_THRESHOLD 150
+#define ACCEL_HIGH_THRESHOLD CUBE_ROOT_0_25
+
+// NOTE: All rates and times are in ms/10.
+// The main loop runs once every 10ms, and the rates are all specified as the
+// number of times around the loop before updating.
+// So, if you want to do something every 200ms, the update rate would be 20.
+
 // how many interactions with the potentiometer we keep track of
 // this esesentially sets the numerical resolution of the pot term
 #define POTENTIOMETER_INTERACTION_THRESHOLD 10
 
-typedef enum
-{
-    ACCEL_LO,
-    ACCEL_HI,
-    POTENTIOMETER_EVENTS,
-    DISTANCE_SENSOR_READ,
-    SENSORY_INPUTS
-} SensoryInputs;
+// Which channel the light sensor is on.
+#define LIGHT_SENSOR_CHANNEL ADC_CHANNEL3
+// We quantize the light sensor readings to discrete levels. This sets
+// how many levels to quantize to
+#define LIGHT_SENSOR_LEVELS 10
 
+// Update rates for each sensor and the interaction tolerance/sensory index.
+#define LIGHT_SENSOR_UPDATE_RATE 20
+#define DIST_SENSOR_UPDATE_RATE 20
+#define POT_UPDATE_RATE 40
+#define BUTTON_UPDATE_RATE 2
+#define INTERACTION_TOLERANCE_UPDATE_RATE 10
+// This shouldn't update too quickly or else the mood will swing around pretty
+// wildly. 1s feels sorta right.
+#define SENSORY_INDEX_UPDATE_RATE 100
+
+/*****************************
+ * Types
+ *****************************/
+
+/**
+ * The state of interaction across all channels. Includes tolerance and sensory
+ * index.
+ */
+struct InteractionState
+{
+    union
+    {
+        struct
+        {
+            Sensory_InputLevel accelState;
+            Sensory_InputLevel lightLevel;
+            Sensory_InputLevel proximityState;
+            Sensory_InputLevel potInteractionState;
+            Sensory_InputLevel buttonState;
+        };
+        Sensory_InputLevel states[5];
+    };
+    Sensory_SensoryIndex interactionTolerance;
+    Sensory_SensoryIndex sensoryIndex;
+
+    /** Current averaged and smoothed sensor input values */
+    float sensorInputs[SENSORY_INPUTS];
+    /** The constants to use for the weighted sum. */
+    float constants[SENSORY_INPUTS];
+    /** The piecewise linear function determining input tolerance over time. */
+    Pwl_Function interactionToleranceFn;
+};
+
+// float constants[SENSORY_INPUTS] = { 10, -3, -3, 4, 5, -4 };
+
+/**
+ * @brief Integrates a discrete quantity over time and determines which of 3
+ * levels the value is currently in.
+ *
+ * The integration serves as a debounce. For each state we must spend
+ * a number of ticks equal to its countThreshold above its stateThreshold before
+ * entering the state. Tuning the count threshold allows us to apply arbitrary
+ * debounce times.
+ */
+struct TristateIntegrator
+{
+    float stateThresholds[3];
+    int countThresholds[3];
+    int counts[3];
+    int triggers[3];
+    int state;
+};
+
+/*****************************
+ * Data
+ *****************************/
+
+/**
+ * @brief A bounded counter.
+ *
+ * The value of the counter will not go above max or below zero. On update, the
+ * counter will either be incremented or decremented; it never remains the same.
+ * This is used as a way to count events in a rolling window. It's not quite the
+ * best for this, but gets us close enough.
+ */
+struct IntegratingCounter
+{
+    int max;
+    int value;
+};
+
+/** Handle to the worker thread. */
 static pthread_t _senseThread;
+/** Should we keep sensing? */
 static int _sense = 0;
 
-static float _sensoryIndex;
+/** Handle to the button. */
+static Button* button;
 
-static float _sensorInputs[SENSORY_INPUTS] = { 0 };
-static float _constants[SENSORY_INPUTS] = { 10, -3, -3, 4 };
-static char report[128];
+/** The interaction state. */
+static struct InteractionState _state = { 0 };
 
-typedef struct
-{
-    int thresholdUp;
-    int thresholdDown;
-    int value;
-    int trigger;
-} Integrator;
-static Integrator _potEventIntegrator = { .thresholdUp =
-                                            POTENTIOMETER_INTERACTION_THRESHOLD,
-                                          .thresholdDown =
-                                            POTENTIOMETER_INTERACTION_THRESHOLD,
-                                          .value = 0,
-                                          .trigger = 0 };
-static Integrator _accelLoHiIntegrator = { .thresholdUp =
-                                             ACCEL_LOHI_UP_THRESHOLD,
-                                           .thresholdDown =
-                                             ACCEL_LOHI_DOWN_THRESHOLD,
-                                           .value = 0,
-                                           .trigger = 0 };
+/** Counter for button events. We are polling every 20ms so cannot detect more
+ * than 50/s. */
+static struct IntegratingCounter _buttonEventCounter = { .max = 50,
+                                                         .value = 0 };
 
-typedef enum
-{
-    INTEGRATOR_TRIGGER,
-    INTEGRATOR_RELEASE,
-} IntegratorEvent;
+/** Determines button interaction state. */
+static struct TristateIntegrator _buttonStateIntegrator = {
+    .stateThresholds = { 0.0, 0.01, 0.4 },
+    .countThresholds = { 10, 3, 3 },
+};
 
+/** Determines light level state. */
+static struct TristateIntegrator _lightLevelTsInt = {
+
+    .stateThresholds = { 0.0, 0.1, 0.2 },
+    .countThresholds = { 3, 3, 3 },
+};
+
+/** Determines accelerometer input state. */
+static struct TristateIntegrator _accelTsInt = {
+    .stateThresholds = { 0.0, 0.001, CUBE_ROOT_0_25 },
+    .countThresholds = { 20, 20, 10 },
+};
+
+/** Determines distance sensor/proximity state. */
+static struct TristateIntegrator _distTsInt = {
+    .stateThresholds = { 0.0, 0.3, 0.65 },
+    .countThresholds = { 3, 3, 3 },
+};
+
+/** Determines potentiometer interaction state. */
+static struct TristateIntegrator _potInteractionIntegrator = {
+    .stateThresholds = { 0.0, 0.01, 0.25 },
+    .countThresholds = { 3, 3, 2 },
+};
+
+/*****************************
+ * Prototypes
+ *****************************/
+
+/**
+ * @brief Determines the global interaction level.
+ *
+ * Sums all interaction states and returns the sum.
+ */
+static int
+_countInteractions(void);
+
+/**
+ * Adds the given data point to the tristate integrator and advances it.
+ */
 static void
-_integrate(Integrator* integrator, int val)
-{
-    int intVal = integrator->value;
-    int threshold =
-      integrator->trigger ? integrator->thresholdDown : integrator->thresholdUp;
-    if (val != 0) {
-        intVal += 1;
-        if (intVal > threshold) {
-            integrator->value = integrator->thresholdDown;
-            integrator->trigger = 1;
-        } else {
-            integrator->value = intVal;
-        }
-    } else {
-        intVal -= 1;
-        if (intVal < 0) {
-            integrator->value = 0;
-            integrator->trigger = 0;
-        } else {
-            integrator->value = intVal;
-        }
-    }
-}
+_integrateTristate(struct TristateIntegrator* ti, float value);
 
+/**
+ * Updates an IntegratingCounter. The counter will be incremented if inc is
+ * greater than zero.
+ */
+static void
+_updateCounter(struct IntegratingCounter* counter, int inc);
+
+/**
+ * Samples the current light level and updates the light level state.
+ */
+static void
+_sampleLightLevel(void);
+
+/**
+ * Samples the potentiometer and uses the difference between the current and
+ * previous reading to update the potentiometer interaction state.
+ */
+static void
+_updatePotReading(void);
+
+/**
+ * Takes a sample from the accelerometer and uses it to update the state.
+ */
+static void
+_updateAccelerometer(void);
+
+/**
+ * Gets the current distance sensor reading and uses it to update the state.
+ */
+static void
+_updateDistanceSensor(void);
+
+/**
+ * Checks for button events and uses them to update the button interaction
+ * state.
+ */
+static void
+_updateButton(void);
+
+/**
+ * Thread worker function that runs the main sensory integration loop.
+ */
 static void*
 _senseWorker(void*);
 
-static void
-_printReport(void);
-static void
-_printReport(void)
+/*****************************
+ * Static fn impl's
+ *****************************/
+
+static int
+_countInteractions(void)
 {
-    snprintf(report,
-             128,
-             "hi: %9.6f  lo: %9.6f  pot: %9.6f ult: %9.6f idx: %9.2f",
-             _sensorInputs[ACCEL_HI],
-             _sensorInputs[ACCEL_LO],
-             _sensorInputs[POTENTIOMETER_EVENTS],
-             _sensorInputs[DISTANCE_SENSOR_READ],
-             _sensoryIndex);
-    printf("%s", report);
+    int count = 0;
+    for (int i = 0; i < 5; i++) {
+        // each state will be either 0, 1, or 2.
+        // Adding them gives high interaction states
+        // more weight.
+        count += _state.states[i];
+    }
+    return count;
 }
 
 static void
-_clearReport(void)
+_integrateTristate(struct TristateIntegrator* ti, float value)
 {
-    int len = strnlen(report, 128);
-    for (int i = 0; i < len; i++) {
-        putc('\b', stdout);
+    int stateIdx;
+    int canTrigger = 1;
+    // find which 'bucket' the given values lies in
+    for (int i = 0; i < 3; i++) {
+        float thresh = ti->stateThresholds[i];
+        if (value >= thresh) {
+            stateIdx = i;
+        }
+        if (ti->triggers[i] > 0) {
+            canTrigger = 0;
+        }
     }
+
+    // update the counts
+    for (int i = 0; i < 3; i++) {
+        int count = ti->counts[i];
+        count += (i == stateIdx) ? 1 : -1;
+        if (count > ti->countThresholds[i]) {
+            count = ti->countThresholds[i];
+            ti->triggers[i] = (canTrigger) ? 1 : 0;
+        }
+
+        if (count < 0) {
+            count = 0;
+            ti->triggers[i] = 0;
+        }
+
+        ti->counts[i] = count;
+    }
+
+    // trigger a new state if we have one
+    for (int i = 0; i < 3; i++) {
+        if ((canTrigger) && ti->counts[i] == ti->countThresholds[i]) {
+            ti->state = i;
+        }
+    }
+}
+
+static void
+_updateCounter(struct IntegratingCounter* counter, int inc)
+{
+    int value = counter->value;
+    value += (inc > 0) ? 1 : -1;
+
+    if (value > counter->max) {
+        value = counter->max;
+    }
+
+    if (value < 0) {
+        value = 0;
+    }
+
+    counter->value = value;
+}
+
+static void
+_sampleLightLevel(void)
+{
+
+    // get the sensor reading
+    size_t level = adc_voltage_raw(LIGHT_SENSOR_CHANNEL);
+    // quantize and normalize it
+    size_t quantFactor = ADC_MAX_READING / LIGHT_SENSOR_LEVELS;
+    size_t quantized = (level / quantFactor) * quantFactor;
+    float normalized = (float)quantized / ADC_MAX_READING;
+
+    // Offset so low levels are negative.
+    // TODO: Ambient levels will make this a problem. Maybe we want to
+    // only add values when they are <0.4 or >0.6? or something?
+    // This should at least be easily calibrated, possibly in the cfg file.
+    normalized -= 0.5;
+
+    // Take a smoothed average
+    float last = _state.sensorInputs[LIGHT_LEVEL];
+    float val = (0.8 * normalized) + (0.2 * last);
+    _state.sensorInputs[LIGHT_LEVEL] = val;
+
+    // Further from zero should mean more interaction.
+    // Integrate just the magnitude to get the interaction strength
+    float mag = fabsf(val);
+    _integrateTristate(&_lightLevelTsInt, mag);
+
+    _state.lightLevel = _lightLevelTsInt.state;
 }
 
 static void
@@ -123,17 +332,23 @@ _updatePotReading(void)
 {
     static float last;
 
+    // Get the pot reading and find the difference from the last.
+    // This tells us how far we've been swung which correlates to how fast
+    // the pot is being turned.
     float pot = (float)adc_voltage_raw(ADC_CHANNEL0) / ADC_MAX_READING;
+    float diff = fabsf(pot - last);
+    diff = (diff <= 0.01) ? 0 : diff;
 
-    float diff = pot - last;
-    int val = (diff > 0.01 || diff < -0.01);
     last = pot;
 
-    _integrate(&_potEventIntegrator, val);
+    // Integrate.
+    _integrateTristate(&_potInteractionIntegrator, diff);
+    _state.potInteractionState = _potInteractionIntegrator.state;
 
-    float normalized =
-      (float)_potEventIntegrator.value / POTENTIOMETER_INTERACTION_THRESHOLD;
-    _sensorInputs[POTENTIOMETER_EVENTS] = normalized;
+    // Keep a smoothed average of the difference. We're smoothing pretty
+    // aggresively just to keep the value from changing too fast.
+    float avg = _state.sensorInputs[POTENTIOMETER_EVENTS];
+    _state.sensorInputs[POTENTIOMETER_EVENTS] = (0.6 * diff) + (0.4 * avg);
 }
 
 static void
@@ -141,9 +356,7 @@ _updateAccelerometer(void)
 {
     Accel_Sample accelSample;
 
-    if (Accel_read(&accelSample) < 0) {
-        // handle the error please.
-    }
+    Accel_read(&accelSample);
 
     // Normalize the 3 axes to [-1, 1]
     float xnorm = (float)accelSample.x / (-1 * ACCEL_MIN_READING);
@@ -159,97 +372,142 @@ _updateAccelerometer(void)
     // due to gravity.
     // TODO: The accelerometer reads ever so slightly high. Maybe we need
     // to compensate each differently? or enable a filter?
+    // Either way it would be better if this offset constant could be a
+    // calibration parameter in the cfg file.
     float mag = sqrtf(x2 + y2 + z2) - 0.505;
 
     // take abs - we don't care about direction
-    float sign = copysignf(1.0, mag);
-    mag *= sign;
+    mag = fabsf(mag);
 
+    // Take the cube root. Small changes will make big differences when being
+    // handled gently, and small changes will make small differences when we're
+    // being tossed around. not being tossed around.
+    // TODO: keep this? It feels right, but we didn't end up non-linearizing the
+    // others. We skipped doing that with the others since it didn't make a lot
+    // of sense to for some and others (like the light sensor) are already
+    // non-linear.
     mag = cbrt((mag < 0.005) ? 0 : mag);
 
-    // set low and high threshold
-    //
-    // TODO: We need to debounce this too.
-    //   Right now HI doesn't have as much say as LO since we go thru LO once on
-    //   the way to HI and once on the way down from HI.
-    //   We need to debounce for a good while after we hit HI.
-    int vv = (mag < CUBE_ROOT_0_25) ? 0 : 1;
-    _integrate(&_accelLoHiIntegrator, vv);
+    // integrate and update state.
+    _integrateTristate(&_accelTsInt, mag);
 
-    // if triggered, we are being roughly handled
-    if (_accelLoHiIntegrator.trigger) {
-        _sensorInputs[ACCEL_HI] = mag;
-        _sensorInputs[ACCEL_LO] = 0; // TODO does this make sense?
+    if (_accelTsInt.state == 2) { // TODO: constants
+        _state.sensorInputs[ACCEL_HI] = mag;
+        _state.sensorInputs[ACCEL_LO] = 0; // TODO does this make sense?
     } else {
-        _sensorInputs[ACCEL_HI] = 0;
-        _sensorInputs[ACCEL_LO] = mag;
+        _state.sensorInputs[ACCEL_HI] = 0;
+        _state.sensorInputs[ACCEL_LO] = mag;
     }
+    _state.accelState = _accelTsInt.state;
+}
+
+static void
+_updateDistanceSensor(void)
+{
+    double dist = Ultrasonic_getDistanceInCm();
+    // TODO Bit of a kludge. getDist should probably just return zero eh?
+    if (dist == INFINITY) {
+        dist = 0;
+    } else {
+        // invert it in the range, since we want closer distances
+        // to be "better" as far as the constant is concerned
+        dist = 100.0 - dist;
+        dist = dist / 100.0;
+    }
+    // Integrate and update.
+    _integrateTristate(&_distTsInt, dist);
+    _state.proximityState = _distTsInt.state;
+    _state.sensorInputs[DISTANCE_SENSOR_READ] = dist;
+}
+
+static void
+_updateButton(void)
+{
+    // event will be BUTTON_UP == 0 if no interaction.
+    ButtonEvent event = Button_getState(button);
+    _updateCounter(&_buttonEventCounter, event);
+
+    // Normalize number of events.
+    float eventsLastSec =
+      (float)_buttonEventCounter.value / _buttonEventCounter.max;
+    _state.sensorInputs[BUTTON_EVENTS] = eventsLastSec;
+
+    // Update.
+    _integrateTristate(&_buttonStateIntegrator, eventsLastSec);
+    _state.buttonState = _buttonStateIntegrator.state;
 }
 
 static void*
 _senseWorker(void* _unused)
 {
     (void)_unused;
+
     float a = 0.7;
-    float history[100];
+    float sensoryIndexHistory[SENSORY_INDEX_UPDATE_RATE];
     int count = 0;
-    float oldIdx = 0;
-    int updatePot = 0;
-    int updatePotEvery = 40;
     while (_sense) {
         long long start = Timeutils_getTimeInNs();
-        double dist = Ultrasonic_getDistanceInCm();
-        // TODO should probably just be zero then eh?
-        if (dist == INFINITY) {
-            dist = 0;
-        } else {
-            // invert it in the range, since we want closer distances
-            // to be "better" as far as the constant is concerned
-            dist = 100.0 - dist;
-            dist = dist / 100.0;
-        }
-        _sensorInputs[DISTANCE_SENSOR_READ] = dist;
 
         _updateAccelerometer();
-        if (updatePot == updatePotEvery) {
-            _updatePotReading();
-            updatePot = 0;
+
+        if (count % DIST_SENSOR_UPDATE_RATE == 0) {
+            _updateDistanceSensor();
         }
-        updatePot++;
 
-        _printReport();
+        if (count % POT_UPDATE_RATE == 0) {
+            _updatePotReading();
+        }
 
-        // TODO: we're integrating sensory index, but we really
-        // want to keep history and integrate the sensor readings themselves
+        if (count % LIGHT_SENSOR_UPDATE_RATE == 0) {
+            _sampleLightLevel();
+        }
+
+        if (count % BUTTON_UPDATE_RATE == 0) {
+            _updateButton();
+        }
+
+        if (count % INTERACTION_TOLERANCE_UPDATE_RATE == 0) {
+            float interactionLevel =
+              (float)_countInteractions() / INTERACTION_TOLERANCE_UPDATE_RATE;
+            _state.interactionTolerance =
+              Pwl_sample(&_state.interactionToleranceFn, interactionLevel);
+        }
+
         float newIdx = 0;
         for (int i = 0; i < SENSORY_INPUTS; i++) {
-            newIdx += _sensorInputs[i] * _constants[i];
+            newIdx += _state.sensorInputs[i] * _state.constants[i];
         }
-        history[count] = (a * newIdx) + ((1 - a) * oldIdx);
-        oldIdx = newIdx;
+        sensoryIndexHistory[count] = newIdx;
         count++;
 
         // integrate the history to get the current sensory index
-        if (count == 100) {
+        if (count % SENSORY_INDEX_UPDATE_RATE == 0) {
             float sum = 0;
-            for (int i = 1; i < 100; i++) {
-                sum += (history[i] + history[i - 1]) / 2;
+            float oldIdx = _state.sensoryIndex;
+
+            for (int i = 1; i < SENSORY_INDEX_UPDATE_RATE; i++) {
+                sum +=
+                  (sensoryIndexHistory[i] + sensoryIndexHistory[i - 1]) / 2;
             }
+            _state.sensoryIndex = (a * sum) + ((1 - a) * oldIdx);
+
             count = 0;
-            _sensoryIndex = sum;
         }
 
         long long elapsed = Timeutils_getTimeInNs() - start;
         long long toSleep = NS_BETWEEN_SAMPLES - elapsed;
-        Timeutils_sleepForNs(toSleep);
 
-        _clearReport();
+        Timeutils_sleepForNs(toSleep);
     }
     return NULL;
 }
 
+/*****************************
+ * Exported fn impl's
+ *****************************/
+
 int
-Sensory_initialize(void)
+Sensory_initialize(const Sensory_Preferences* prefs)
 {
     if (Accel_open() < 0) {
         return SENSORY_EACCEL;
@@ -259,6 +517,24 @@ Sensory_initialize(void)
         Accel_close();
         return SENSORY_EULTSON;
     }
+
+    if ((button = Button_open(68, 8, 10)) == NULL) {
+        Ultrasonic_shutdown();
+        Accel_close();
+        return -4;
+    }
+
+    Pwl_Function tolerance = PWL_LINEARFALL_P1N1_FUNCTION;
+    _state.interactionTolerance = 0;
+    _state.sensoryIndex = 0;
+    memcpy(&_state.interactionToleranceFn, &tolerance, sizeof(Pwl_Function));
+
+    _state.constants[ACCEL_LO] = prefs->cAccelLow;
+    _state.constants[ACCEL_HI] = prefs->cAccelHigh;
+    _state.constants[POTENTIOMETER_EVENTS] = prefs->cPot;
+    _state.constants[DISTANCE_SENSOR_READ] = prefs->cDistance;
+    _state.constants[LIGHT_LEVEL] = prefs->cLight;
+    _state.constants[BUTTON_EVENTS] = prefs->cButton;
 
     return SENSORY_OK;
 }
@@ -272,11 +548,39 @@ Sensory_beginSensing(void)
     return 1;
 }
 
-Sensory_SensoryIndex
-Sensory_getSensoryIndex(void)
+void
+Sensory_reportSensoryState(Sensory_State* state)
 {
-    // TODO sync
-    return _sensoryIndex;
+    state->accelState = _state.accelState;
+    state->lightLevel = _state.lightLevel;
+    state->proximityState = _state.proximityState;
+    state->potInteractionState = _state.potInteractionState;
+    state->buttonState = _state.buttonState;
+    state->sensoryIndex = _state.sensoryIndex;
+    state->sensoryTolerance = _state.interactionTolerance;
+}
+
+const char*
+Sensory_inputLevelToStr(Sensory_InputLevel lvl)
+{
+    switch (lvl) {
+        case NEUTRAL: {
+            return "NEUTRAL";
+            break;
+        }
+        case LOW: {
+            return "LOW";
+            break;
+        }
+        case HI: {
+            return "HI";
+            break;
+        }
+        default: {
+            return "UNKNOWN LEVEL";
+            break;
+        }
+    }
 }
 
 void
@@ -284,4 +588,8 @@ Sensory_close(void)
 {
     _sense = 0;
     pthread_join(_senseThread, NULL);
+
+    Button_close(button);
+    Ultrasonic_shutdown();
+    Accel_close();
 }

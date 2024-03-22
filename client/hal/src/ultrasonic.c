@@ -1,6 +1,6 @@
 #include "hal/ultrasonic.h"
+#include "com/timeutils.h"
 #include "hal/gpio.h"
-#include "hal/timeutils.h"
 
 #include <assert.h>
 #include <math.h>

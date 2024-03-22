@@ -11,8 +11,7 @@
  * - Any input is received on STDIN (i.e. the user presses enter)
  * - The @ref shutdown_request_shutdown function is called
  */
-#ifndef SPENNYDL_SHUTDOWN_H
-#define SPENNYDL_SHUTDOWN_H
+#pragma once
 
 /** OK status code. */
 #define SHUTDOWN_CONTINUE 0
@@ -52,5 +51,3 @@ shutdown_install(shutdown_notify_fn* notify_fn);
  */
 void
 shutdown_request_shutdown(void);
-
-#endif /* SPENNYDL_SHUTDOWN_H */

@@ -3,7 +3,7 @@
  * @brief Helper functions for file IO based on the C file streams functions.
  * @author Spencer Leslie 301571329
  */
-#include "hal/fileio.h"
+#include "com/fileio.h"
 
 #include <dirent.h>
 #include <errno.h>

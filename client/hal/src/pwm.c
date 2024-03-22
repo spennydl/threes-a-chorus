@@ -4,7 +4,7 @@
  * @author Spencer Leslie 301571329
  */
 #include "hal/pwm.h"
-#include "hal/fileio.h"
+#include "com/fileio.h"
 
 #include <fcntl.h>
 #include <malloc.h>

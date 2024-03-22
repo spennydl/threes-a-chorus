@@ -4,11 +4,10 @@
  * @author Spencer Leslie 301571329
  */
 #include "hal/gpio.h"
-#include "hal/fileio.h"
+#include "com/fileio.h"
 
 #include <asm-generic/errno-base.h>
 #include <dirent.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <malloc.h>
 #include <stdbool.h>
