@@ -65,13 +65,15 @@ beatRequesterWorker(void* p)
             nsToSleep -= reqTime;
         }
 
-        long long newDebt = nsDebt - nsToSleep;
-        if(newDebt < 0) {
-            newDebt = 0;
-        }
+        if(nsToSleep > 0) {
+            long long newDebt = nsDebt - nsToSleep;
+            if(newDebt < 0) {
+                newDebt = 0;
+            }
 
-        nsToSleep -= nsDebt;
-        nsDebt = newDebt;
+            nsToSleep -= nsDebt;
+            nsDebt = newDebt;
+        }
 
         MidiPlayer_setBpm(60000000000 / nsBetweenBeats);
 

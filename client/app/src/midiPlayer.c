@@ -264,7 +264,7 @@ MidiPlayer_playMidiFile(char* path, int channelNumber)
 void
 MidiPlayer_playNextBeat()
 {
-    nsLeft += nsPerBeat();
+    nsLeft = nsPerBeat();
 }
 
 void
@@ -287,12 +287,16 @@ midiPlayerWorker(void* p)
     timeUntilNextEvent = 0;
 
     while(running) {
-        if(!readyToPlay || currentNode == NULL || nsLeft <= 0) {
+        if(!readyToPlay || currentNode == NULL) {
             continue;
         }
 
         if(nsLeft < 0) {
             nsLeft = 0;
+        }
+
+        if(nsLeft == 0) {
+          continue;
         }
 
         long long chunkOfTime = (long long)((60000000000 / (bpm * ppq)));
