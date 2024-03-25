@@ -19,16 +19,24 @@ static bool running = false;
 
 static int bpm = 105;
 
-static atomic_long msLastBeatStarted = 0;
+static atomic_llong nsLastBeatStarted = 0;
 
 static char* midiToSend;
 
 static atomic_llong beatsPlayedTotal = 0;
 
+/*
 static long
 msBetweenBeats()
 {
     return (long)(60.0 / bpm * 1000.0);
+}
+*/
+
+static long long
+nsBetweenBeats()
+{
+    return (long long)(60.0 / bpm * 1000000000);
 }
 
 static void
@@ -37,12 +45,12 @@ onMessageRecieved(void* instance, const char* newMessage, int socketFd)
     (void)instance;
 
     if(strcmp(newMessage, BEAT_CODE) == 0) {
-        char msLeft[MAX_LEN] = {0};
-        long waitMs = msBetweenBeats();
-        long msToWaitUntilNextBeat = (msLastBeatStarted + waitMs) - Timeutils_getTimeInMs();
-        snprintf(msLeft, MAX_LEN - 1, "%ld;%ld", msToWaitUntilNextBeat, waitMs);
+        char nsLeft[MAX_LEN] = {0};
+        long long waitNs = nsBetweenBeats();
+        long long nsToWaitUntilNextBeat = (nsLastBeatStarted + waitNs) - Timeutils_getTimeInNs();
+        snprintf(nsLeft, MAX_LEN - 1, "%lld;%lld", nsToWaitUntilNextBeat, waitNs);
         //printf("%s\n",msLeft);
-        ssize_t res = Tcp_sendTcpServerResponse(msLeft, socketFd);
+        ssize_t res = Tcp_sendTcpServerResponse(nsLeft, socketFd);
         (void)res;
     }
     else if(strcmp(newMessage, SEND_FILE) == 0) {
@@ -93,11 +101,11 @@ void* beatSyncThreadWorker(void* p)
     (void)p;
 
     while(running) {
-        long msToSleep = msBetweenBeats();
-        msLastBeatStarted = Timeutils_getTimeInMs();
-        Timeutils_sleepForMs(msToSleep);
+        long long nsToSleep = nsBetweenBeats();
+        nsLastBeatStarted = Timeutils_getTimeInNs();
+        Timeutils_sleepForNs(nsToSleep);
         beatsPlayedTotal++;
-        //printf("After being eepy for %ldms...Beat!\n", msToSleep);
+        printf("After being eepy for %lldns...Beat!\n", nsToSleep);
     }
 
     return NULL;
