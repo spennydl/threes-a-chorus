@@ -105,7 +105,7 @@ void* beatSyncThreadWorker(void* p)
         nsLastBeatStarted = Timeutils_getTimeInNs();
         Timeutils_sleepForNs(nsToSleep);
         beatsPlayedTotal++;
-        printf("After being eepy for %lldns...Beat!\n", nsToSleep);
+        printf("After being eepy for %lldns...Beat %lld!\n", nsToSleep, beatsPlayedTotal);
     }
 
     return NULL;
