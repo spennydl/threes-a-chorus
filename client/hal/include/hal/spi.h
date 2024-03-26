@@ -32,19 +32,25 @@
 
 typedef uint8_t byte;
 
+typedef enum
+{
+    SPI_OK = 0,
+    SPI_ERR,
+} Spi_StatusCode;
+
 /**
  * Initialize a SPI bus.
  * @param spiDevice The pathname of the SPI bus to initialize.
- * @return TODO: Something.
+ * @return Spi_StatusCode Whether init succeeded.
  */
-void
+Spi_StatusCode
 Spi_init(char* spiDevice);
 
 /**
  * Shutdown the SPI bus.
- * @return TODO: Something.
+ * @return Spi_StatusCode Whether shutdown succeeded.
  */
-void
+Spi_StatusCode
 Spi_shutdown(void);
 
 /**
@@ -59,7 +65,7 @@ Spi_readReg(byte regAddr);
  * Write a value to a SPI device's register.
  * @param regAddr The register address to write.
  * @param value The value to write.
- * @return TODO: Something.
+ * @return Spi_StatusCode Whether the write succeeded.
  */
-void
+Spi_StatusCode
 Spi_writeReg(byte regAddr, byte value);

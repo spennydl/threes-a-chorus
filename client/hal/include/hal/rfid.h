@@ -27,19 +27,22 @@
 
 #pragma once
 
-// Note:
+#include "hal/spi.h"
+
+#include <assert.h>
+#include <pthread.h>
+#include <stdatomic.h>
+
+// Terminology:
 // PCD  (Proximity Coupling Device)         == RFID Reader == MFRC522
 // PICC (Proximity Integrated Circuit Card) == RFID Tag    == MIFARE Classic 1K
 
-#define NUM_BYTES_IN_PICC_BLOCK 16
-#define NUM_BYTES_IN_PICC_UID 4
+/****************************/
+/*  MFRC522 Register Codes  */
+/****************************/
 
-/**********************/
-/* Register Hex Codes */
-/**********************/
-
-// These are regs that are integral to the RFID reading loop.
-// All of these regs are worth fully comprehending through the datasheet.
+// These are regs that are essential to the RFID reading loop. All of these regs
+// are worth fully comprehending through the datasheet.
 #define PCD_COMMAND_REG 0x01
 #define PCD_COM_IRQ_REG 0x04
 #define PCD_ERROR_REG 0x06
@@ -47,88 +50,95 @@
 #define PCD_FIFO_LEVEL_REG 0x0A
 #define PCD_CONTROL_REG 0x0C
 #define PCD_BIT_FRAMING_REG 0x0D
-#define PCD_VERSION_REG 0x37
 
-// These are regs we initialize once, then don't touch again.
-// It is okay, and expected, to not understand these regs.
+// These are regs we use once, then don't touch again. They are not as important
+// to understand, but they still perform crucial init functions.
 #define PCD_MODE_REG 0x11
-#define PCD_TX_MODE_REG 0x12
-#define PCD_RX_MODE_REG 0x13
 #define PCD_TX_CONTROL_REG 0x14
 #define PCD_TX_ASK_REG 0x15
-#define PCD_MOD_WIDTH_REG 0x24
 
-// These are regs related to frame timings.
-// They fall in a similar category to the init regs.
-#define PCD_T_MODE_REG 0x2A
-#define PCD_T_PRESCALER_REG 0x2B
-#define PCD_T_RELOAD_REG_H 0x2C
-#define PCD_T_RELOAD_REG_L 0x2D
+// A reg for debugging.
+#define PCD_VERSION_REG 0x37
 
-/*
- * Command Codes
- * These are specific codes we send to issue a command.
- */
+/***************************/
+/*  MFRC522 Command Codes  */
+/***************************/
 
-// PCD | RFID Reader | MFRC522
 #define PCD_IDLE_CMD 0x00
 #define PCD_TRANSCEIVE_CMD 0x0C
-#define PCD_MF_AUTHENT_CMD 0x0E
 
-// PICC | RFID Tag | MF1S503x
+/****************************/
+/*  MF1S503x Command Codes  */
+/****************************/
+
 #define PICC_REQA_CMD 0x26
 #define PICC_ANTICOLLISION_CMD_A 0x93
 #define PICC_ANTICOLLISION_CMD_B 0x20
 
-/*
- * Error Codes
- */
-// TODO: Rename these to RFID errors (not PICC exclusive).
-#define PICC_OK 0
-#define PICC_NO_TAG_ERR 1
-#define PICC_BAD_FIFO_READ_ERR 2
-#define PICC_CHECKSUM_ERR 3
-#define PICC_OTHER_ERR 4
+/*****************************/
+/*         Bitmasks          */
+/*****************************/
 
-#include "hal/spi.h"
+#define RX_IRQ_BITMASK 0x20
+#define ERROR_BITMASK 0x13
+#define INVALID_BYTE_BITMASK 0x07
+
+/*****************************/
+/*     RFID Status Codes     */
+/*****************************/
+
+typedef enum
+{
+    RFID_OK = 0,
+    RFID_RW_ERR,
+    RFID_TIMEOUT_ERR,
+    RFID_INVALID_BYTE_ERR,
+    RFID_UNEXPECTED_RESPONSE_ERR,
+    RFID_CHECKSUM_ERR,
+    RFID_OTHER_ERR,
+} Rfid_StatusCode;
+
+/****************************/
+/*        Num Bytes         */
+/****************************/
+
+#define NUM_BITS_IN_BYTE 8
+#define NUM_BYTES_IN_PICC_UID 4
+
+// ATQA = Answer to Request A, i.e. a tag's response to a REQA command.
+// Section 9.4 of MF1 datasheet:
+// The ATQA is always 2 bytes long: { 0x04, 0x00 }.
+#define NUM_BYTES_IN_ATQA 2
+#define PICC_ATQA 0x04
+
+#define NUM_BYTES_IN_REQA_CMD 1
+#define NUM_BYTES_IN_ANTICOLLISION_CMD 2
+
+//////////////////// Functions ////////////////////////
 
 /**
- * Initialize the RFID reader.
- * @return TODO:
+ * Initialize the RFID reader and its thread.
+ * @return Rfid_StatusCode Whether init succeeded.
  */
-void
+Rfid_StatusCode
 Rfid_init(void);
 
 /**
  * Shutdown the RFID reader.
- * @return TODO:
+ * @return Rfid_StatusCode Whether shutdown succeeded.
  */
-void
+Rfid_StatusCode
 Rfid_shutdown(void);
 
 /**
- * Search for a PICC by sending a REQA command from the PCD.
- * @return int A PICC status code: whether a tag has been found.
- */
-int
-Rfid_searchForTag(void);
-
-/**
- * Retrieve the UID of a PICC following a successful REQA command.
- * @param buffer The buffer to store the UID in.
- * @return int A PICC status code.
- */
-int
-Rfid_getTagUid(byte* buffer);
-
-/**
- * Get the current tag's ID, which we define as the first byte of the UID.
- * For our project, merely the first byte is enough to distinguish our tags.
+ * Get the current tag's "ID" (read: not UID), which we define as the first byte
+ * of the *actual* UID. For our project, just the first byte is enough to
+ * distinguish our tags, and one byte is simpler to work with than an array.
  * @return byte The first byte of the UID of the tag that the module is
  * currently reading, or 0xFF if no tag is currently being read.
  */
 byte
-Rfid_getCurrentTagId();
+Rfid_getCurrentTagId(void);
 
 /**
  * Print the firmware version of an MFRC522, which can be 0x91 or 0x92.
