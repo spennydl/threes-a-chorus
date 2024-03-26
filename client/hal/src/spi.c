@@ -49,7 +49,6 @@ byte
 Spi_readReg(byte regAddr)
 {
     // Prepare 2 buffers.
-
     // txBuf contains the reg we want to access.
     // Following a successful read, rxBuf will contain the reg content.
     byte txBuf[SPI_BUFF_SIZE] = { regAddr, 0 };
