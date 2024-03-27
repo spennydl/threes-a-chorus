@@ -22,7 +22,15 @@ main()
     MidiPlayer_playMidiFile("overworld.mid");
 
     while(1) {
-        //
+        char input[32];
+        printf("Enter exit to quit, file name, or a number for bpm: ");
+        scanf("%s", input);
+
+        if(isdigit(input[0])) {
+            int newBpm = atoi(input);
+            MidiPlayer_setBpm(newBpm);
+            printf("Set BPM to %d\n", newBpm);
+        }
     }
     
     /*BeatSync_initialize();
