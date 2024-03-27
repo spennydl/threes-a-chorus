@@ -10,7 +10,6 @@
 #include <string.h>
 
 #include "tcp.h"
-#include "beatsync.h"
 #include "midiPlayer.h"
 
 int

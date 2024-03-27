@@ -191,29 +191,20 @@ tcpServerConnectionHandler(void* socketFdArg)
     int socketFd = (int)(uintptr_t)socketFdArg;
     bool connectionOpen = true;
 
+    char buffer[MAX_LEN];
+    bzero(buffer, MAX_LEN);
+    int res = recv(socketFd, buffer, MAX_LEN, 0);
+    if (res < 0) {
+        printf("Error reading into buffer\n");
+        return NULL;
+    }
+
+    printf("New connect said: %s\n", buffer);
+
+    sendMessageToObservers(buffer, socketFd);
+
     while(tcpServerRunning && connectionOpen) {
         
-        char buffer[MAX_LEN];
-        bzero(buffer, MAX_LEN);
-
-        int res = recv(socketFd, buffer, MAX_LEN, 0);
-        if (res < 0) {
-            printf("Error reading into buffer\n");
-            return NULL;
-        }
-
-        if (strcmp(buffer, EXIT_CODE) == 0) {
-            connectionOpen = false;
-            continue;
-        }
-
-        if (strlen(buffer) == 0) {
-            printf("Closing socket because recieved a message with zero length, this could be bad in the future?\n");
-            connectionOpen = false;
-            continue;
-        }
-
-        sendMessageToObservers(buffer, socketFd);
     }
 
     close(socketFd);

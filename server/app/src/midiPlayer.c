@@ -13,6 +13,7 @@
 #include "hal/timeutils.h"
 #include "midiPlayer.h"
 #include "lib/midi-parser.h"
+#include "tcp.h"
 
 struct MidiEventNode {
     struct MidiEventNode* next;
@@ -36,19 +37,24 @@ static pthread_t playerThread;
 static struct MidiEventNode* channelHeads[16] = {0};
 static struct MidiEventNode* currentEventNodes[16] = {0};
 
+static int listeners[16] = {-1};
+
+static int serverInstance = 42;
+
 static long long
 vTimeInNs(int vtime)
 {
   return (long long)(vtime * (60000000000 / (bpm * ppq)));
 }
 
-/*
-static long long
-nsPerBeat()
+static void
+onMessageRecieved(void* instance, const char* newMessage, int socketFd)
 {
-  return 60000000000 / bpm;
+    (void)instance;
+    printf("Registering new socket to send to for channel 0 because %s\n", newMessage);
+    listeners[0] = socketFd;
 }
-*/
+
 
 static void
 clearNode(struct MidiEventNode* node)
@@ -72,8 +78,11 @@ clearAllEventNodes()
 static void makeLinkedListLoop(struct MidiEventNode* currentMidiHead)
 {
     if(currentMidiHead == NULL) {
-      perror("Midi head is null when trying to make loop\n");
+      //perror("Midi head is null when trying to make loop\n");
       return;
+    }
+    else {
+      printf("Making channel %d loop because it is valid\n", currentMidiHead->channel);
     }
 
     struct MidiEventNode* current = currentMidiHead;
@@ -222,6 +231,16 @@ parseMidiFileChannel(const char *path)
 void
 MidiPlayer_initialize()
 {
+    for(int i = 0; i < 16; i++) {
+      listeners[i] = -1;
+    }
+
+    TcpObserver exampleObserver;
+    exampleObserver.instance = &serverInstance;
+    exampleObserver.notification = onMessageRecieved;
+
+    Tcp_attachToTcpServer(&exampleObserver);
+
     pthread_create(&playerThread, NULL, &midiPlayerWorker, NULL);
 }
 
@@ -282,7 +301,16 @@ midiPlayerWorker(void* p)
           currentEventNodes[i]->currentVTime = currentEventNodes[i]->vtime;
           currentEventNodes[i] = currentEventNodes[i]->next;
           // Play this event
-          printf("channel %d: %d after delay of %ld\n", currentEventNodes[i]->channel, currentEventNodes[i]->param1, currentEventNodes[i]->vtime);
+          char buffer[MAX_LEN] = {0};
+          snprintf(buffer, MAX_LEN - 1, "%d;%d", currentEventNodes[i]->status, currentEventNodes[i]->param1);
+          
+          if(listeners[i] != -1) {
+            Tcp_sendTcpServerResponse(buffer, listeners[i]);
+            printf("sent to: %s\n", buffer);
+          }
+          else {
+            printf("would send %s\n", buffer);
+          }
         }
         else {
           currentEventNodes[i]->currentVTime -= shortestVTime;
