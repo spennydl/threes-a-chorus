@@ -25,7 +25,7 @@ _deserializeMidiEvent(const char* message)
 {
     MidiEvent event;
     int type = atoi(message);
-    event.type = ntohl(type);
+    event.type = type;
 
     int i;
     for (i = 0; i < MAX_BUFFER_SIZE && message[i] != '\0'; i++) {
@@ -35,7 +35,7 @@ _deserializeMidiEvent(const char* message)
         }
     }
     int data = atoi(message + i);
-    event.eventData = ntohl(data);
+    event.eventData = data;
 
     return event;
 }
@@ -55,13 +55,15 @@ _playNetMidi(void* _unused)
             continue;
         }
 
+        printf("%s\n",requestBuf);
+
         MidiEvent event = _deserializeMidiEvent(requestBuf);
 
         if (event.type == MIDI_STATUS_NOTE_ON) {
             FmPlayer_setNote(event.eventData - 36);
             FmPlayer_controlNote(NOTE_CTRL_NOTE_ON);
         } else if (event.type == MIDI_STATUS_NOTE_OFF) {
-            FmPlayer_controlNote(NOTE_CTRL_NOTE_ON);
+            FmPlayer_controlNote(NOTE_CTRL_NOTE_OFF);
         } else {
             fprintf(
               stderr, "WARN: Could not parse event type %d\n", event.type);
@@ -85,6 +87,8 @@ NetMidi_openMidiChannel(const char* hostname, NetMidi_Channel channel)
         perror("Subscribe");
         return sent;
     }
+
+    play = 1;
 
     if (pthread_create(&_midiPlayerThread, NULL, _playNetMidi, NULL) < 0) {
         fprintf(stderr, "Could not start midi player thread\n");

@@ -30,7 +30,7 @@ static atomic_bool readyToPlay = false;
 static bool running = true;
 
 static int ppq;
-static int bpm = 105;
+static int bpm = 90;
 
 static pthread_t playerThread;
 
@@ -42,7 +42,7 @@ static int listeners[16] = {-1};
 static int serverInstance = 42;
 
 static long long
-vTimeInNs(int vtime)
+vTimeInNs(long long vtime)
 {
   return (long long)(vtime * (60000000000 / (bpm * ppq)));
 }
@@ -51,8 +51,15 @@ static void
 onMessageRecieved(void* instance, const char* newMessage, int socketFd)
 {
     (void)instance;
-    printf("Registering new socket to send to for channel 0 because %s\n", newMessage);
-    listeners[0] = socketFd;
+
+    char buffer[MAX_LEN] = {0};
+    strncpy(buffer, newMessage, MAX_LEN - 1);
+    char* command = strtok(buffer, " ");
+    (void)(command);
+    int channel = atoi(strtok(NULL, " "));
+
+    printf("Registering new socket to send to for channel %d\n", channel);
+    listeners[channel] = socketFd;
 }
 
 
@@ -295,30 +302,28 @@ midiPlayerWorker(void* p)
       }
     }
 
+    Timeutils_sleepForNs(vTimeInNs(shortestVTime));
+
     for(int i = 0; i < 16; i++) {
       if(channelHeads[i] != NULL) {
         if(currentEventNodes[i]->currentVTime == shortestVTime) {
           currentEventNodes[i]->currentVTime = currentEventNodes[i]->vtime;
-          currentEventNodes[i] = currentEventNodes[i]->next;
-          // Play this event
-          char buffer[MAX_LEN] = {0};
-          snprintf(buffer, MAX_LEN - 1, "%d;%d", currentEventNodes[i]->status, currentEventNodes[i]->param1);
           
           if(listeners[i] != -1) {
+            // Play this event
+            char buffer[MAX_LEN] = {0};
+            snprintf(buffer, MAX_LEN - 1, "%d;%d", currentEventNodes[i]->status, currentEventNodes[i]->param1);
             Tcp_sendTcpServerResponse(buffer, listeners[i]);
-            printf("sent to: %s\n", buffer);
+            printf("channel %d sent to: %s\n", i, buffer);
           }
-          else {
-            printf("would send %s\n", buffer);
-          }
+
+          currentEventNodes[i] = currentEventNodes[i]->next;
         }
         else {
           currentEventNodes[i]->currentVTime -= shortestVTime;
         }
       }
     }
-
-    Timeutils_sleepForNs(vTimeInNs(shortestVTime));
   }
 
   return NULL;
