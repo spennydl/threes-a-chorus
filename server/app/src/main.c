@@ -11,12 +11,22 @@
 
 #include "tcp.h"
 #include "beatsync.h"
+#include "midiPlayer.h"
 
 int
 main()
 {
     Tcp_initializeTcpServer();
-    BeatSync_initialize();
+
+    MidiPlayer_initialize();
+
+    MidiPlayer_playMidiFile("overworld.mid");
+
+    while(1) {
+        //
+    }
+    
+    /*BeatSync_initialize();
     BeatSync_setMidiToSend("overworld.mid");
 
     while(true)
@@ -41,6 +51,9 @@ main()
 
     printf("Shutting down!\n");
 
-    BeatSync_cleanup();
+    BeatSync_cleanup();*/
+
+    MidiPlayer_cleanup();
+
     Tcp_cleanUpTcpServer();
 }
