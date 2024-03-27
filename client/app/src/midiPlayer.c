@@ -246,10 +246,18 @@ MidiPlayer_playMidiFile(char* path, int channelNumber)
 
     printf("Beat offset %lld or %lld in ns\n", beatOffset, beatOffsetInNs);
 
-    while(beatOffsetInNs > nsPerBeat()) {
+    while(1) {
       long long delay = vTimeInNs(current->vtime);
-      beatOffsetInNs -= delay;
-      current = current->next;
+
+      if(beatOffsetInNs > delay) {
+        beatOffsetInNs -= delay;
+        current = current->next;
+      }
+      else {
+        current = current->next;
+        break;
+      }
+      
     }
 
     timeSinceStart = Timeutils_getTimeInNs() - timeSinceStart;
