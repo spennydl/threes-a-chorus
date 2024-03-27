@@ -255,6 +255,7 @@ MidiPlayer_playMidiFile(char* path, int channelNumber)
       }
       else {
         current = current->next;
+        beatOffsetInNs = delay;
         break;
       }
       
