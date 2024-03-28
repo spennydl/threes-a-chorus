@@ -3,8 +3,6 @@
  * @brief Contains util functions related to time.
  */
 
-#include <time.h>
-
 #pragma once
 
 long long

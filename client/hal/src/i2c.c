@@ -1,5 +1,5 @@
 #include "hal/i2c.h"
-#include "hal/fileio.h"
+#include "com/fileio.h"
 #include <fcntl.h>
 #include <linux/i2c-dev.h>
 #include <linux/i2c.h>
@@ -17,50 +17,50 @@
 #define I2C_NO_ADDRESS 128
 
 /// Pins of available busses.
-static const int _i2c_bus_pins[][2] = { { 18, 17 }, { 20, 19 } };
+static const int _I2C_busPins[][2] = { { 18, 17 }, { 20, 19 } };
 
 /// Internal i2c information. This gets passed back to the user
-/// hidden within the \ref i2c_bus_handle.
+/// hidden within the \ref I2C_BusHandle.
 typedef struct
 {
     int fd; ///< File descriptor representing the open bus.
-    i2c_device_address selected_address; ///< Currently selected device address.
-} _i2c_bus;
+    I2C_DeviceAddress selectedAddress; ///< Currently selected device address.
+} _I2C_Bus;
 
 ///
-/// Allocates a new \ref _i2c_bus.
-/// \return _i2c_bus* Pointer to the allocated \ref _i2c_bus. Will be NULL
+/// Allocates a new \ref _I2C_Bus.
+/// \return _I2C_Bus* Pointer to the allocated \ref _I2C_Bus. Will be NULL
 ///         on allocation failure.
-static _i2c_bus*
-_i2c_bus_alloc(void);
+static _I2C_Bus*
+_I2C_busAlloc(void);
 
 ///
 /// Configure pins for i2c.
-/// \param busno The \ref i2c_bus_number to configure.
+/// \param busno The \ref I2C_Bus to configure.
 /// \return bool Whether or not configuration succeeded.
 static bool
-_i2c_config_pins_for_i2c(i2c_bus_number busno);
+_I2C_configPinsForI2c(I2C_Bus busno);
 
-static _i2c_bus*
-_i2c_bus_alloc(void)
+static _I2C_Bus*
+_I2C_busAlloc(void)
 {
-    _i2c_bus* b = (_i2c_bus*)malloc(sizeof(_i2c_bus));
+    _I2C_Bus* b = (_I2C_Bus*)malloc(sizeof(_I2C_Bus));
     if (b) {
-        memset(b, 0, sizeof(_i2c_bus));
+        memset(b, 0, sizeof(_I2C_Bus));
     }
     return b;
 }
 
 static bool
-_i2c_config_pins_for_i2c(i2c_bus_number busno)
+_I2C_configPinsForI2c(I2C_Bus busno)
 {
-    const int* bus_pins = NULL;
+    const int* busPins = NULL;
     switch (busno) {
         case I2C_BUS1:
-            bus_pins = _i2c_bus_pins[0];
+            busPins = _I2C_busPins[0];
             break;
         case I2C_BUS2:
-            bus_pins = _i2c_bus_pins[1];
+            busPins = _I2C_busPins[1];
             break;
         default:
             return false;
@@ -69,9 +69,9 @@ _i2c_config_pins_for_i2c(i2c_bus_number busno)
 
     for (int i = 0; i < 2; i++) {
         char command[FILEIO_SMALL_BUFSIZE];
-        snprintf(command, FILEIO_SMALL_BUFSIZE, I2C_CONFIGPIN_FMT, bus_pins[i]);
-        int exit_code = fileio_pipe_command(command);
-        if (exit_code != 0) {
+        snprintf(command, FILEIO_SMALL_BUFSIZE, I2C_CONFIGPIN_FMT, busPins[i]);
+        int exitCode = fileio_pipe_command(command);
+        if (exitCode != 0) {
             return I2C_ECONFIGPIN;
         }
     }
@@ -79,40 +79,40 @@ _i2c_config_pins_for_i2c(i2c_bus_number busno)
 }
 
 int
-i2c_bus_open(i2c_bus_number busno, i2c_bus_handle* handle_out)
+I2C_openBus(I2C_Bus busno, I2C_BusHandle* outHandle)
 {
-    if (busno < 0 || busno >= I2C_N_BUSSES || handle_out == NULL) {
+    if (busno < 0 || busno >= I2C_N_BUSSES || outHandle == NULL) {
         return I2C_EBADARG;
     }
 
-    if (!_i2c_config_pins_for_i2c(busno)) {
+    if (!_I2C_configPinsForI2c(busno)) {
         return false;
     }
-    char i2c_bus_file[FILEIO_SMALL_BUFSIZE];
-    snprintf(i2c_bus_file, FILEIO_SMALL_BUFSIZE, I2C_BUS_FMT, busno);
+    char i2cBusFile[FILEIO_SMALL_BUFSIZE];
+    snprintf(i2cBusFile, FILEIO_SMALL_BUFSIZE, I2C_BUS_FMT, busno);
 
-    int fd = open(i2c_bus_file, O_RDWR);
+    int fd = open(i2cBusFile, O_RDWR);
     if (fd < 0) {
         return I2C_EOPEN;
     }
 
-    _i2c_bus* bus = _i2c_bus_alloc();
+    _I2C_Bus* bus = _I2C_busAlloc();
     if (!bus) {
         close(fd);
         return I2C_EALLOC;
     }
     bus->fd = fd;
-    bus->selected_address = I2C_NO_ADDRESS;
+    bus->selectedAddress = I2C_NO_ADDRESS;
 
-    handle_out->__i2c = bus;
+    outHandle->__i2c = bus;
     return I2C_EOK;
 }
 
 void
-i2c_bus_close(i2c_bus_handle* handle)
+I2C_closeBus(I2C_BusHandle* handle)
 {
     if (handle != NULL) {
-        _i2c_bus* bus = handle->__i2c;
+        _I2C_Bus* bus = handle->__i2c;
         close(bus->fd);
         free(bus);
         handle->__i2c = NULL;
@@ -120,41 +120,63 @@ i2c_bus_close(i2c_bus_handle* handle)
 }
 
 int
-i2c_select_device(i2c_bus_handle* handle, i2c_device_address device_addr)
+I2C_selectDevice(I2C_BusHandle* handle, I2C_DeviceAddress device_addr)
 {
     if (handle == NULL) {
         return I2C_EBADARG;
     }
-    _i2c_bus* bus = handle->__i2c;
+    _I2C_Bus* bus = handle->__i2c;
 
     if (ioctl(bus->fd, I2C_SLAVE, device_addr) < 0) {
         return I2C_EIOCTL;
     }
-    bus->selected_address = device_addr;
+    bus->selectedAddress = device_addr;
     return I2C_EOK;
 }
 
 int
-i2c_write(i2c_bus_handle* handle,
-          i2c_device_register reg,
+I2C_write(I2C_BusHandle* handle,
+          I2C_RegisterAddress reg,
           const uint8_t* data,
           size_t bytes)
 {
     if (handle == NULL) {
         return I2C_EBADARG;
     }
-    _i2c_bus* bus = handle->__i2c;
+    _I2C_Bus* bus = handle->__i2c;
 
     // Write the address plus all of the bytes.
     // I2C registers are contiguous, so we can write
     // to one and continue writing bytes.
-    size_t total_bytes = bytes + 1;
-    uint8_t buf[total_bytes];
+    size_t totalBytes = bytes + 1;
+    uint8_t buf[totalBytes];
     buf[0] = reg;
     memcpy(buf + 1, data, bytes);
 
-    if (write(bus->fd, buf, total_bytes) < 0) {
+    if (write(bus->fd, buf, totalBytes) < 0) {
         return I2C_EWRITE;
     }
+    return I2C_EOK;
+}
+
+int
+I2C_read(I2C_BusHandle* handle,
+         I2C_RegisterAddress reg,
+         uint8_t* data,
+         size_t nBytes)
+{
+    if (handle == NULL) {
+        return I2C_EBADARG;
+    }
+    _I2C_Bus* bus = handle->__i2c;
+
+    if (write(bus->fd, &reg, 1) < 0) {
+        return I2C_EWRITE;
+    }
+
+    if (read(bus->fd, data, nBytes) < 0) {
+        return I2C_EREAD;
+    }
+
     return I2C_EOK;
 }

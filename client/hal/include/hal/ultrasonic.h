@@ -6,17 +6,10 @@
 
 // TODO:
 // 2) Implement hysteresis to avoid inaccurate, large swings in readings.
-
-#include "hal/gpio.h"
-#include "hal/pwm.h"
-#include "hal/timeutils.h"
-
-#include <assert.h>
-#include <pthread.h>
-#include <stdio.h>
-
 #pragma once
 
+#include <pthread.h>
+#include <stdbool.h>
 /**
  * Configure the BeagleBone's PWM and GPIO for the ultrasonic sensor.
  * PWM is used by the trigger to emit a pulse for 10us every 200ms.

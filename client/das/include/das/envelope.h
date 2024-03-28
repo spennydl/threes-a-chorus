@@ -45,70 +45,10 @@
  */
 #pragma once
 
+#include "com/pwl.h"
+
 #include <stddef.h>
 #include <stdint.h>
-
-#define ENV_ADSR_PLUCK_FUNCTION                                                \
-    {                                                                          \
-        .ptsX = { 0.0, 0.1, 0.15, 0.65, 1.0 },                                 \
-        .ptsY = { 0.0, 0.75, 0.55, 0.55, 0.0 }, .pts = 5                       \
-    }
-
-#define ENV_ADSR_AHH_FUNCTION                                                  \
-    {                                                                          \
-        .ptsX = { 0.0, 0.25, 0.35, 0.75, 1.0 },                                \
-        .ptsY = { 0.0, 0.6, 0.55, 0.55, 0.0 }, .pts = 5                        \
-    }
-
-#define ENV_SWELL_FUNCTION                                                     \
-    {                                                                          \
-        .ptsX = { 0.0, 0.5, 1.0 }, .ptsY = { 0.0, 1.0, 0.0 }, .pts = 3         \
-    }
-
-#define ENV_EXP_FALLOFF_FUNCTION                                               \
-    {                                                                          \
-        .ptsX = { 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 }, .ptsY = { 1.0,               \
-                                                            0.201896517994655, \
-                                                            0.040762203978366, \
-                                                            0.008229747049020, \
-                                                            0.001661557273174, \
-                                                            0.0 },             \
-        .pts = 6                                                               \
-    }
-
-#define ENV_CONST_FUNCTION                                                     \
-    {                                                                          \
-        .ptsX = { 0.0, 1.0 }, .ptsY = { 0.6, 0.6 }, .pts = 2                   \
-    }
-
-#define ENV_PEAKFALL_FUNCTION                                                  \
-    {                                                                          \
-        .ptsX = { 0.0, 0.1, 0.2, 0.3, 1.0 },                                   \
-        .ptsY = { 0.0, 0.1, 0.18, 0.0, 0.0 }, .pts = 5                         \
-    }
-
-#define ENV_LINEARFALL_FUNCTION                                                \
-    {                                                                          \
-        .ptsX = { 0.0, 1.0 }, .ptsY = { 1.0, 0.0 }, .pts = 2                   \
-    }
-
-#define ENV_LINEARRAMP_FUNCTION                                                \
-    {                                                                          \
-        .ptsX = { 0.0, 1.0 }, .ptsY = { 0.0, 1.0 }, .pts = 2                   \
-    }
-
-#define ENV_BELLSTRIKE_FUNCTION                                                \
-    {                                                                          \
-        .ptsX = { 0.0, 0.25, 0.75, 1.0 }, .ptsY = { 0.6, 0.35, 0.35, 0.0 },    \
-        .pts = 4                                                               \
-    }
-
-typedef struct
-{
-    float ptsX[6];
-    float ptsY[6];
-    int pts;
-} Env_PiecewiseLinearFn;
 
 typedef struct
 {
@@ -118,7 +58,7 @@ typedef struct
     float repeatPoint;
     long lengthMs;
 
-    Env_PiecewiseLinearFn fn;
+    Pwl_Function fn;
 
     uint8_t state;
 } Env_Envelope;

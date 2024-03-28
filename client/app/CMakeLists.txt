@@ -12,7 +12,15 @@ set_target_properties(
   bbgAlsa PROPERTIES IMPORTED_LOCATION
                      "${CMAKE_SOURCE_DIR}/bin/libasound.so.2.0.0")
 
-target_link_libraries(tac LINK_PRIVATE lib hal das bbgAlsa Threads::Threads)
+target_link_libraries(
+  tac
+  LINK_PRIVATE
+  lib
+  hal
+  das
+  com
+  bbgAlsa
+  Threads::Threads)
 
 add_custom_command(
   TARGET tac

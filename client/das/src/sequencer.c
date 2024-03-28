@@ -1,4 +1,5 @@
 #include "das/sequencer.h"
+#include "com/timeutils.h"
 #include "das/fmplayer.h"
 #include <pthread.h>
 #include <stdio.h>
@@ -84,30 +85,6 @@ Sequencer_fillSlot(SequencerIdx idx,
     pthread_rwlock_unlock(&_seqLock);
 }
 
-static long long
-_getTimeInNs(void)
-{
-    struct timespec spec;
-    clock_gettime(CLOCK_REALTIME, &spec);
-
-    long long seconds = spec.tv_sec;
-    long long nanoSeconds = spec.tv_nsec;
-
-    long long totalNanoSeconds = seconds * 1000000000 + nanoSeconds;
-    return totalNanoSeconds;
-}
-
-static void
-_sleepForNs(long long delayNs)
-{
-    const long long NS_PER_SECOND = 1000000000;
-    int seconds = delayNs / NS_PER_SECOND;
-    int nanoseconds = delayNs % NS_PER_SECOND;
-
-    struct timespec reqDelay = { seconds, nanoseconds };
-    nanosleep(&reqDelay, (struct timespec*)NULL);
-}
-
 static void
 _runSequencerSlot(SequencerIdx idx)
 {
@@ -137,7 +114,7 @@ _sequencer(void* _data)
                 // run the sequencer
                 // This thread is the only one that reads/writes playback
                 // position
-                long long start = _getTimeInNs();
+                long long start = Timeutils_getTimeInNs();
                 long long timeBetweenUpdates = 0;
 
                 SequencerIdx currentPos = seq->playbackPosition;
@@ -153,9 +130,9 @@ _sequencer(void* _data)
                     seq->playbackPosition = currentPos + 1;
                 }
 
-                long long elapsed = _getTimeInNs() - start;
+                long long elapsed = Timeutils_getTimeInNs() - start;
                 long long toSleep = timeBetweenUpdates - elapsed;
-                _sleepForNs(toSleep);
+                Timeutils_sleepForNs(toSleep);
 
                 break;
             }
