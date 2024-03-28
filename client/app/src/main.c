@@ -45,7 +45,6 @@ main(int argc, char** argv)
                 break;
             }
         }
-    }
 
     NetMidi_stop();
     FmPlayer_close();
