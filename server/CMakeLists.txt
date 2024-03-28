@@ -15,4 +15,5 @@ add_link_options(-fsanitize=address)
 # What folders to build
 add_subdirectory(hal)  
 add_subdirectory(app)
+add_subdirectory(lib)
 

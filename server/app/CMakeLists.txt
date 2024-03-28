@@ -8,7 +8,7 @@ set(THREAD_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 # Make use of the HAL library
-target_link_libraries(tac_server LINK_PRIVATE hal Threads::Threads)
+target_link_libraries(tac_server LINK_PRIVATE hal lib Threads::Threads)
 
 # Copy executable to final location
 add_custom_command(TARGET tac_server POST_BUILD 

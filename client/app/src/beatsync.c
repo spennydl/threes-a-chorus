@@ -43,26 +43,49 @@ beatRequesterWorker(void* p)
 {
     (void)p;
     char res[MAX_BUFFER_SIZE] = { 0 };
-    long msToSleep;
-    long msBetweenBeats;
+    long long nsToSleep;
+    long long nsBetweenBeats;
+    long long nsDebt = 0;
 
     while (running) {
-        // printf("Slept for %ldms but now ...Beat!\n", msToSleep);
-        MidiPlayer_playNextBeat();
 
+        if(nsToSleep > 0) {
+            printf("Slept for %lldns but now ...Beat!\n", nsToSleep);
+            MidiPlayer_playNextBeat();
+        }
+        
         long long reqTimeStart = Timeutils_getTimeInNs();
         memset(res, 0, MAX_BUFFER_SIZE);
         Tcp_makeServerRequest(BEAT_CODE, res);
         long long reqTime = Timeutils_getTimeInNs() - reqTimeStart;
 
-        msToSleep = strtol(strtok(res, ";"), NULL, 10);
-        msBetweenBeats = strtol(strtok(NULL, ";"), NULL, 10);
+        nsToSleep = strtoll(strtok(res, ";"), NULL, 10);
+        nsBetweenBeats = strtoll(strtok(NULL, ";"), NULL, 10);
         if (reqTime > 0) {
-            msToSleep -= reqTime;
+            nsToSleep -= reqTime;
         }
 
-        MidiPlayer_setBpm(60000 / msBetweenBeats);
-        Timeutils_sleepForMs(msToSleep);
+        if(nsToSleep > 0) {
+            long long newDebt = nsDebt - nsToSleep;
+            if(newDebt < 0) {
+                newDebt = 0;
+            }
+
+            nsToSleep -= nsDebt;
+            nsDebt = newDebt;
+        }
+
+        MidiPlayer_setBpm(60000000000 / nsBetweenBeats);
+
+        if(nsToSleep <= 0)
+        {
+            nsDebt += -nsToSleep;
+            nsToSleep = 0;
+        }
+        else
+        {
+            Timeutils_sleepForNs(nsToSleep);
+        }
     }
 
     return NULL;

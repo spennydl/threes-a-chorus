@@ -39,3 +39,15 @@ Timeutils_sleepForMs(long long delayInMs)
     struct timespec reqDelay = { seconds, nanoseconds };
     nanosleep(&reqDelay, (struct timespec*)NULL);
 }
+
+void
+Timeutils_sleepForNs(long long delayInNs)
+{
+    const long long NS_PER_SECOND = 1000000000;
+
+    int seconds = delayInNs / NS_PER_SECOND;
+    int nanoseconds = delayInNs % NS_PER_SECOND;
+
+    struct timespec reqDelay = { seconds, nanoseconds };
+    nanosleep(&reqDelay, (struct timespec*)NULL);
+}

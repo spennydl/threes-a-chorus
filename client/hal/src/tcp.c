@@ -1,13 +1,13 @@
 #include <stdio.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <pthread.h>
+#include <unistd.h>
 
 #include <hal/tcp.h>
 
@@ -16,7 +16,7 @@ static int sockfd;
 static unsigned int serverlen;
 static struct sockaddr_in serverAddress;
 
-static struct hostent *server;
+static struct hostent* server;
 
 static pthread_mutex_t tcpLock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -34,7 +34,7 @@ error(char* message)
 }
 
 void
-Tcp_initializeTcpClient(char* hostname)
+Tcp_initializeTcpClient(const char* hostname)
 {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
@@ -79,7 +79,7 @@ Tcp_makeServerRequest(char* message, char* buffer)
 ssize_t
 Tcp_sendMessage(char* message)
 {
-    char msg[MAX_BUFFER_SIZE] = {0};
+    char msg[MAX_BUFFER_SIZE] = { 0 };
     strncpy(msg, message, strlen(message));
     return send(sockfd, msg, MAX_BUFFER_SIZE, 0);
 }
@@ -96,13 +96,13 @@ Tcp_requestFile(char* fileName)
     pthread_mutex_lock(&tcpLock);
     Tcp_sendMessage(SEND_FILE);
     char fileSizeBuffer[MAX_BUFFER_SIZE];
-    
+
     Tcp_receiveMessage(fileSizeBuffer);
     int fileSize = atoi(fileSizeBuffer);
-    
+
     FILE* receivedFile = fopen(fileName, "w");
 
-    if(receivedFile == NULL) {
+    if (receivedFile == NULL) {
         char errorMessage[512];
         snprintf(errorMessage, 512, "Could not open '%s' to write!", fileName);
         error(errorMessage);
@@ -111,15 +111,16 @@ Tcp_requestFile(char* fileName)
     }
 
     int remainingData = fileSize;
-    
+
     char buffer[BUFSIZ];
 
     ssize_t len;
 
-    while(remainingData > 0) {
-        len = recv(sockfd, buffer, remainingData < BUFSIZ ? remainingData : BUFSIZ, 0);
+    while (remainingData > 0) {
+        len = recv(
+          sockfd, buffer, remainingData < BUFSIZ ? remainingData : BUFSIZ, 0);
 
-        if(len <= 0) {
+        if (len <= 0) {
             perror("Ran into error while recv file");
             fclose(receivedFile);
             pthread_mutex_unlock(&tcpLock);
@@ -127,17 +128,16 @@ Tcp_requestFile(char* fileName)
         }
 
         fwrite(buffer, sizeof(char), len, receivedFile);
-       
+
         remainingData -= len;
-        #ifdef DEV
+#ifdef DEV
         printf("%d bytes got so %d bytes left\n", len, remainingData);
-        #endif
+#endif
     }
 
-
-    #ifdef DEV
+#ifdef DEV
     printf("done!\n");
-    #endif
+#endif
 
     fclose(receivedFile);
     pthread_mutex_unlock(&tcpLock);
