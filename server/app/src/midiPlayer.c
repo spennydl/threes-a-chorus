@@ -64,13 +64,13 @@ onMessageRecieved(void* instance, const char* newMessage, int socketFd)
 
 
 static void
-clearNode(struct MidiEventNode* node)
+clearNode(struct MidiEventNode* node, struct MidiEventNode* head, bool firstTime)
 {
-    if(node == NULL) {
+    if(node == NULL || (!firstTime && node == head)) {
         return;
     }
 
-    clearNode(node->next);
+    clearNode(node->next, head, false);
     free(node);
 }
 
@@ -78,7 +78,8 @@ static void
 clearAllEventNodes()
 {
     for(int i = 0; i < 16; i++) {
-      clearNode(channelHeads[i]);
+      clearNode(channelHeads[i], channelHeads[i], true);
+      channelHeads[i] = NULL;
     }
 }
 
@@ -171,6 +172,11 @@ parseMidiFileChannel(const char *path)
 {
   struct stat st;
 
+  if(access(path, F_OK) != 0) {
+    printf("MIDI file not found\n");
+    return 1;
+  }
+
   if (stat(path, &st)) {
     printf("stat(%s):\n", path);
     return 1;
@@ -262,7 +268,13 @@ void
 MidiPlayer_playMidiFile(char* path)
 {
     readyToPlay = false;
-    parseMidiFileChannel(path);
+
+    clearAllEventNodes();
+    int res = parseMidiFileChannel(path);
+
+    if(res == 1) {
+      return;
+    }
 
     for(int i = 0; i < 16; i++) {
       makeLinkedListLoop(channelHeads[i]);
@@ -314,7 +326,7 @@ midiPlayerWorker(void* p)
             char buffer[MAX_LEN] = {0};
             snprintf(buffer, MAX_LEN - 1, "%d;%d", currentEventNodes[i]->status, currentEventNodes[i]->param1);
             Tcp_sendTcpServerResponse(buffer, listeners[i]);
-            printf("channel %d sent to: %s\n", i, buffer);
+            //printf("channel %d sent to: %s\n", i, buffer);
           }
 
           currentEventNodes[i] = currentEventNodes[i]->next;

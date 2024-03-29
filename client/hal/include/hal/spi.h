@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "hal/timeutils.h"
+#include "com/timeutils.h"
 
 #include <assert.h>
 #include <fcntl.h>

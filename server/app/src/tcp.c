@@ -81,13 +81,13 @@ Tcp_initializeTcpServer()
     if(socketDescriptor < 0) 
     {
         printf("Error creating TCP socket during initialization!\n");
-        return;
+        exit(0);
     }
 
     if(bind(socketDescriptor, (struct sockaddr*)&tcp_sin, sizeof(tcp_sin)) < 0)
     {
         printf("Error binding to socket during TCP server initialization!\n");
-        return;
+        exit(0);
     }
 
     listen(socketDescriptor, 5);

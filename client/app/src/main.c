@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "beatsync.h"
 #include "das/fmplayer.h"
 #include "netMidiPlayer.h"
 #include <poll.h>
@@ -13,7 +12,7 @@
 #include <unistd.h>
 
 int
-main(void)
+main(int argc, char** argv)
 {
     if (argc < 3) {
         printf("You must specify the server ip (192.168.7.1), midi channel");
