@@ -36,8 +36,27 @@ static pthread_t playerThread;
 
 static struct MidiEventNode* channelHeads[16] = {0};
 static struct MidiEventNode* currentEventNodes[16] = {0};
+static int instruments[16] = {0};
 
-static int listeners[16] = {-1};
+// I really don't wanna malloc this array
+static int listeners[16][3] = {
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1}
+};
 
 static int serverInstance = 42;
 
@@ -59,7 +78,20 @@ onMessageRecieved(void* instance, const char* newMessage, int socketFd)
     int channel = atoi(strtok(NULL, " "));
 
     printf("Registering new socket to send to for channel %d\n", channel);
-    listeners[channel] = socketFd;
+    
+    for(int j = 0; j < 3; j++) {
+      if(listeners[channel][j] == -1) {
+
+        char buffer[MAX_LEN] = {0};
+        snprintf(buffer, MAX_LEN - 1, "%d;%d", MIDI_STATUS_PGM_CHANGE, instruments[channel]);
+        Tcp_sendTcpServerResponse(buffer, socketFd);
+
+        listeners[channel][j] = socketFd;
+        return;
+      }
+    }
+    
+    printf("Somehow there was no room to register. This shouldn't be possible.\n");
 }
 
 
@@ -168,7 +200,7 @@ static void parse_and_dump(struct midi_parser *parser, long long* trackLengths)
 }
 
 static int
-parseMidiFileChannel(const char *path)
+parseMidiFile(const char *path)
 {
   struct stat st;
 
@@ -223,8 +255,8 @@ parseMidiFileChannel(const char *path)
     struct MidiEventNode* paddingNode = malloc(sizeof(struct MidiEventNode));
     paddingNode->status = MIDI_STATUS_NOTE_OFF;
     paddingNode->vtime = padding;
-    paddingNode->param1 = 0;
-    paddingNode->param2 = 0;
+    paddingNode->param1 = 1;
+    paddingNode->param2 = 1;
     paddingNode->next = NULL;
     paddingNode->channel = i;
 
@@ -245,7 +277,9 @@ void
 MidiPlayer_initialize()
 {
     for(int i = 0; i < 16; i++) {
-      listeners[i] = -1;
+      for(int j = 0; j < 3; j++) {
+        listeners[i][j] = -1;
+      }
     }
 
     TcpObserver exampleObserver;
@@ -270,7 +304,7 @@ MidiPlayer_playMidiFile(char* path)
     readyToPlay = false;
 
     clearAllEventNodes();
-    int res = parseMidiFileChannel(path);
+    int res = parseMidiFile(path);
 
     if(res == 1) {
       return;
@@ -279,12 +313,6 @@ MidiPlayer_playMidiFile(char* path)
     for(int i = 0; i < 16; i++) {
       makeLinkedListLoop(channelHeads[i]);
       currentEventNodes[i] = channelHeads[i];
-    }
-
-    for(int j = 0; j < 10; j++) {
-      for(int i = 0; i < 3; i++) {
-        currentEventNodes[i] = currentEventNodes[i]->next;
-      }
     }
     
     readyToPlay = true;
@@ -321,14 +349,23 @@ midiPlayerWorker(void* p)
         if(currentEventNodes[i]->currentVTime == shortestVTime) {
           currentEventNodes[i]->currentVTime = currentEventNodes[i]->vtime;
           
-          if(listeners[i] != -1) {
-            // Play this event
-            char buffer[MAX_LEN] = {0};
-            snprintf(buffer, MAX_LEN - 1, "%d;%d", currentEventNodes[i]->status, currentEventNodes[i]->param1);
-            Tcp_sendTcpServerResponse(buffer, listeners[i]);
-            //printf("channel %d sent to: %s\n", i, buffer);
+          if(currentEventNodes[i]->status == MIDI_STATUS_PGM_CHANGE) {
+            printf("Instrument for channel %d is now %d\n", i, currentEventNodes[i]->param1);
+            instruments[i] = currentEventNodes[i]->param1;
           }
 
+          for(int j = 0; j < 3; j++) {
+            char buffer[MAX_LEN] = {0};
+            snprintf(buffer, MAX_LEN - 1, "%d;%d", currentEventNodes[i]->status, currentEventNodes[i]->param1);
+            if(listeners[i][j] != -1) {
+              int res = Tcp_sendTcpServerResponse(buffer, listeners[i][j]);
+              if(res == -1) {
+                printf("Channel %d #%d disconnected\n", i, j);
+                listeners[i][j] = -1;
+              }
+            }
+          }
+          
           currentEventNodes[i] = currentEventNodes[i]->next;
         }
         else {
