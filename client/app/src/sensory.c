@@ -117,8 +117,6 @@ static pthread_t _senseThread;
 /** Should we keep sensing? */
 static int _sense = 0;
 
-static int have_accel = 1;
-
 /** Handle to the button. */
 static Button* button;
 
@@ -450,9 +448,7 @@ _senseWorker(void* _unused)
     while (_sense) {
         long long start = Timeutils_getTimeInNs();
 
-        if (have_accel) {
-            _updateAccelerometer();
-        }
+        _updateAccelerometer();
 
         if (count % DIST_SENSOR_UPDATE_RATE == 0) {
             _updateDistanceSensor();
@@ -514,9 +510,7 @@ int
 Sensory_initialize(const Sensory_Preferences* prefs)
 {
     if (Accel_open() < 0) {
-        fprintf(stderr,
-                "WARN: Could not open accelerometer. It will not work!\n");
-        have_accel = 0;
+        return SENSORY_EACCEL;
     }
 
     if (!Ultrasonic_init()) {

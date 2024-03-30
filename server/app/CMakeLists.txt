@@ -4,7 +4,8 @@ include_directories(include)
 file(GLOB MY_SOURCES "src/*.c")
 add_executable(tac_server ${MY_SOURCES})
 
-set(THREAD_PREFER_PTHREAD_FLAG ON)
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
 
 # Make use of the HAL library
