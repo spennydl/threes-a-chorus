@@ -125,6 +125,7 @@ _playNetMidi(void* _unused)
             continue;
         }
     }
+
     return NULL;
 }
 
@@ -159,4 +160,6 @@ NetMidi_stop(void)
 {
     play = 0;
     pthread_join(_midiPlayerThread, NULL);
+    FmPlayer_controlNote(NOTE_CTRL_NOTE_OFF);
+    Tcp_cleanupTcpClient();
 }

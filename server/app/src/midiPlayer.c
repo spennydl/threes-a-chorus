@@ -78,6 +78,17 @@ onMessageRecieved(void* instance, const char* newMessage, int socketFd)
     int channel = atoi(strtok(NULL, " "));
 
     printf("Registering new socket to send to for channel %d\n", channel);
+
+    // Bad channel
+    if(channelHeads[channel] == NULL) {
+      for(int i = 0; i < 16; i++) {
+        if(channelHeads[i] != NULL) {
+          printf("Tried to join invalid channel %d. Had to fallback to %d\n", channel, i);
+          channel = i;
+          break;
+        }
+      }
+    }
     
     for(int j = 0; j < 3; j++) {
       if(listeners[channel][j] == -1) {
