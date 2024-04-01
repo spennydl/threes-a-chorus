@@ -3,35 +3,42 @@
 
 #include <poll.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
 
-#include "hal/rfid.h"
 #include "com/timeutils.h"
+#include "das/fm.h"
 #include "das/fmplayer.h"
-#include "netMidiPlayer.h"
+#include "das/melodygen.h"
+#include "das/sequencer.h"
 #include <poll.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 
-#define POLL_TAG_ID_MS 100
-
-static int
-runMidiPlayer(int channel, char* ip)
+static void
+_sequencerLoopCallback(void)
 {
-    int currentTagId = 0xFF;
+    printf("Resetting...\n");
+    Sequencer_clear();
+    Melody_generateToSequencer();
+}
 
-    if (NetMidi_openMidiChannel(ip, channel) < 0) {
-        printf("Error: Could not open midi channel\n");
-        return currentTagId;
-    }
+int
+main(void)
+{
+    srand(time(NULL));
+    FmPlayer_initialize(&FM_CHIRP_PARAMS);
 
-    bool onRfid = true;
+    Sequencer_initialize(220, _sequencerLoopCallback);
+
+    Melody_generateToSequencer();
+
+    Sequencer_start();
 
     struct pollfd stdinp = { .fd = STDIN_FILENO, .events = POLLIN | POLLPRI };
-    while (onRfid) {
+    while (true) {
         int poll_status;
-        if ((poll_status = poll(&stdinp, 1, 500)) < 0) {
+        if ((poll_status = poll(&stdinp, 1, 0)) < 0) {
             // I'm not sure this is likely to happen. If it does we'll
             // simply continue.
             perror("SHUTDOWN: ERR: Polling stdin failed");
@@ -48,42 +55,11 @@ runMidiPlayer(int channel, char* ip)
             }
         }
 
-        // Check if on RFID
-        currentTagId = Rfid_getCurrentTagId();
-        onRfid = currentTagId != 0xFF;
+        Timeutils_sleepForMs(200);
     }
 
-    printf("Disconnecting from server!\n");
-    NetMidi_stop();
-    return currentTagId;
-}
-
-int
-main(int argc, char** argv)
-{
-    if (argc < 2) {
-        printf("You must specify the server ip (192.168.7.1)");
-        return 0;
-    }
-
-    char* ip = argv[1];
-    int currentTagId = 0xFF;
-
-    Rfid_init();
-    FmPlayer_initialize(&FM_DEFAULT_PARAMS);
-
-    while(1) {
-        currentTagId = Rfid_getCurrentTagId();
-
-        if(currentTagId != 0xFF) {
-            printf("Found tag. Id is %d -> %d\n", currentTagId, currentTagId % 16);
-            currentTagId = runMidiPlayer(currentTagId % 16, ip);
-        }
-        else {
-            Timeutils_sleepForMs(POLL_TAG_ID_MS);
-        }
-    }
-
+    Sequencer_destroy();
     FmPlayer_close();
+
     return 0;
 }

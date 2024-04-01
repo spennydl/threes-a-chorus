@@ -75,7 +75,7 @@ static _FmSynth*
 _fmSynthAlloc(void);
 /** Set the playing note. */
 static void
-_setNote(_FmSynth* synth, Note note);
+_setNote(_FmSynth* synth, int note);
 /** Set an operator's CM value.*/
 static void
 _setOperatorCM(_FmSynth* synth, FmOperator op, float ratio, Note fixTo);
@@ -175,7 +175,7 @@ Fm_setNote(FmSynthesizer* s, Note note)
 }
 
 static void
-_setNote(_FmSynth* synth, Note note)
+_setNote(_FmSynth* synth, int note) // note is an int to force signness
 {
     // Frequency of a note relative to a reference frequency is given by:
     //
@@ -320,7 +320,7 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
             }
 
             synth->opAngle[op] += synth->opStep[op] + opMod[op];
-            synth->opAngle[op] -= floor(synth->opAngle[op]);
+            synth->opAngle[op] -= floorf(synth->opAngle[op]);
         }
 
         // If we need to, update the ADSR envelope and triggers.
@@ -335,6 +335,8 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
         float finalSample = 0;
         for (int op = 0; op < FM_OPERATORS; op++) {
             finalSample += opSamples[op] * synth->opOutput[op];
+
+            // TODO remove this printing
             if (finalSample >= 1) {
                 fprintf(stderr, "WARN: sample greater than 1!\n");
             }

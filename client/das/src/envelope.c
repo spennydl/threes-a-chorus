@@ -8,6 +8,7 @@
  */
 #include "das/envelope.h"
 #include "com/pwl.h"
+#include <stdio.h>
 
 #define ENV_TRIGGER_BIT (0x1)
 #define ENV_GATE_BIT (0x2)
@@ -35,7 +36,7 @@ Env_getValueAndAdvance(Env_Envelope* env)
         if (x >= env->gatePoint) {
             if (env->repeatPoint >= 0) {
                 x = env->repeatPoint;
-            } else if (!(env->state & ENV_GATE_BIT)) {
+            } else if ((env->state & ENV_GATE_BIT) == 0) {
                 x = env->gatePoint;
             }
         }

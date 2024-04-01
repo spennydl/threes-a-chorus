@@ -112,7 +112,7 @@ _play(void* arg)
 
         // wait for a period to become available.
         // This blocks until the next period is ready to write.
-        status = snd_pcm_wait(_fmPlayer->pcmHandle, 1000);
+        status = snd_pcm_wait(_fmPlayer->pcmHandle, 200);
         if (status < 0) {
             // Try to recover the stream!
             if ((status = snd_pcm_recover(_fmPlayer->pcmHandle, status, 0)) <
@@ -123,6 +123,10 @@ _play(void* arg)
                 // TODO: we need a way to shut down from here.
                 return NULL;
             }
+        } else if (status == 0) {
+            // time out on wait. Loop again to update params.
+            printf("we timed out\n");
+            continue;
         }
 
         // we have a period ready to be written, and the previous one is being
