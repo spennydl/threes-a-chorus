@@ -15,6 +15,7 @@
 #include "com/pwl.h"
 #include "das/envelope.h"
 #include "das/wavetable.h"
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -91,8 +92,11 @@ typedef enum
     A6,
     Bb6,
     B6,
-    NOTE_NONE
-} Note;
+} NoteOffset;
+
+#define NOTE_NONE INT_MIN
+
+typedef int Note;
 
 /** Operators available. Adding more is as simple as adding more values here. */
 typedef enum
@@ -148,6 +152,8 @@ typedef struct
      */
     size_t sampleRate;
 
+    Env_Envelope envelope;
+
     /**
      * @brief Operator paramters.
      */
@@ -163,10 +169,14 @@ typedef struct
  */
 static const FmSynthParams FM_DEFAULT_PARAMS = {
     .sampleRate = 44100,
+    .envelope = { .gatePoint = 0.65,
+                  .repeatPoint = -1,
+                  .lengthMs = 2500,
+                  .fn = PWL_ADSR_PLUCK_FUNCTION },
     .opParams = { { .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
                     .outputStrength = 1.0,
-                    .algorithmConnections = { 0.0, 4.0, 0.0, 0.0 } },
+                    .algorithmConnections = { 0.0, 0.0, 0.0, 0.0 } },
                   {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 4.0,
@@ -330,26 +340,30 @@ static const FmSynthParams FM_AHH_PARAMS = {
 
 static const FmSynthParams FM_BASS_PARAMS = {
     .sampleRate = 44100,
+    .envelope = { .gatePoint = 0.65,
+                  .repeatPoint = -1,
+                  .lengthMs = 1500,
+                  .fn = PWL_ADSR_PLUCK_FUNCTION },
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 1.0,
-                    .outputStrength = 0.8,
+                    .CmRatio = 1.0 / 2,
+                    .outputStrength = 0.6,
                     .algorithmConnections = { 0.0, 0.0, 0.0, 4.0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 4.0,
-                    .outputStrength = 0.4,
+                    .CmRatio = 2.0,
+                    .outputStrength = 0.3,
                     .algorithmConnections = { 0.0, 0.0, 3.4, 0.0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 1,
+                    .CmRatio = 1.0 / 2,
                     .algorithmConnections = { 0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 4.0,
+                    .CmRatio = 2.0,
                     .algorithmConnections = { 0, 0, 0.8, 0 },
                   } },
     .opEnvelopes = { { .gatePoint = 0.65,

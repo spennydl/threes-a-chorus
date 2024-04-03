@@ -47,6 +47,7 @@
 
 #include "com/pwl.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -74,3 +75,9 @@ Env_trigger(Env_Envelope* env);
 
 void
 Env_gate(Env_Envelope* env);
+
+bool
+Env_isTriggered(const Env_Envelope* env);
+
+bool
+Env_isGated(const Env_Envelope* env);

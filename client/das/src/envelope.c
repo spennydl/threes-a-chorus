@@ -8,7 +8,7 @@
  */
 #include "das/envelope.h"
 #include "com/pwl.h"
-#include <stdio.h>
+#include <stdbool.h>
 
 #define ENV_TRIGGER_BIT (0x1)
 #define ENV_GATE_BIT (0x2)
@@ -62,4 +62,15 @@ void
 Env_gate(Env_Envelope* env)
 {
     env->state |= ENV_GATE_BIT;
+}
+
+bool
+Env_isTriggered(const Env_Envelope* env)
+{
+    return (env->state & ENV_TRIGGER_BIT) == ENV_TRIGGER_BIT;
+}
+bool
+Env_isGated(const Env_Envelope* env)
+{
+    return (env->state & ENV_GATE_BIT) == ENV_GATE_BIT;
 }

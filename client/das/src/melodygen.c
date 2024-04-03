@@ -7,18 +7,24 @@
 
 #define HALF_STEPS_IN_OCTAVE 12
 
+static Note _lastNotePlayed = NOTE_NONE;
+
 static int
-randInRange(int start, int end) // half-open! [start, end)
+randInRange(int start, int end)
 {
-    float randNorm = (float)rand() / RAND_MAX;
-    int range = end - start;
-    return (randNorm * range) + start;
+    return (rand() % (end + 1 - start)) + start;
+}
+
+static bool
+_randomTest(const float chance)
+{
+    return ((float)rand() / RAND_MAX) < chance;
 }
 
 static int
 _halfStepsAway(const Note from, const Note to)
 {
-    return (int)to - (int)from;
+    return to - from;
 }
 
 #define SIGNOF(X) (((X) >= 0) ? 1 : -1)
@@ -26,8 +32,8 @@ _halfStepsAway(const Note from, const Note to)
 static int
 _noteSignedRingDistance(const Note from, const Note to)
 {
-    int fromBase = (int)from % HALF_STEPS_IN_OCTAVE;
-    int toBase = (int)to % HALF_STEPS_IN_OCTAVE;
+    int fromBase = from % HALF_STEPS_IN_OCTAVE;
+    int toBase = to % HALF_STEPS_IN_OCTAVE;
 
     int dist = _halfStepsAway(fromBase, toBase);
     int absdist = abs(dist);
@@ -44,17 +50,26 @@ _distanceInRightDirection(int d, int dir)
 }
 
 static Note
-_closestInChord(const Chord chord, const Note from, const int dir)
+_pickRandomChordNote(const Chord chord)
 {
     Note result = NOTE_NONE;
     const Note* notesInChord = chordTable[chord];
 
-    if (from == NOTE_NONE) {
-        while (result == NOTE_NONE) {
-            result = notesInChord[randInRange(0, 4)];
-        }
-        return result;
+    while (result == NOTE_NONE) {
+        result = notesInChord[randInRange(0, 3)];
     }
+    return result;
+}
+
+static Note
+_closestInChord(const Chord chord, const Note from, const int dir)
+{
+    if (from == NOTE_NONE) {
+        return _pickRandomChordNote(chord);
+    }
+
+    Note result = NOTE_NONE;
+    const Note* notesInChord = chordTable[chord];
 
     int distance = INT32_MAX;
     for (int i = 0; i < 4; i++) {
@@ -67,7 +82,7 @@ _closestInChord(const Chord chord, const Note from, const int dir)
         int d = _noteSignedRingDistance(from, chordNote);
         int absd = abs(d);
         if (d == 0 &&
-            !randInRange(0, 3)) { // TODO: this chance could be adjusted
+            !randInRange(0, 2)) { // TODO: this chance could be adjusted
             // we share a note, and we are staying on it
             return from;
         } else if (_distanceInRightDirection(d, dir) && absd < distance) {
@@ -82,71 +97,143 @@ _closestInChord(const Chord chord, const Note from, const int dir)
     return result;
 }
 
-void
-Melody_generateToSequencer(void)
+static int
+_arpeggiateChord(const SequencerIdx startIdx,
+                 const Chord chord,
+                 const Note from,
+                 const int direction)
 {
-    const Chord* prog = tempProgressions[0];
+    Note currentNote = _closestInChord(chord, from, direction);
+    Note first = currentNote % 12;
 
-    Note startingNote = NOTE_NONE;
+    const Note* notesInChord = chordTable[chord];
 
-    const Note* firstChord = chordTable[prog[0]];
-    while (startingNote == NOTE_NONE) {
-        startingNote = firstChord[randInRange(0, 3)];
+    Sequencer_fillSlot(startIdx, NOTE_CTRL_NOTE_ON, currentNote, NULL);
+
+    int i = 0;
+    int step = 1;
+    if (direction < 0) {
+        i = 3;
+        step = -1;
     }
 
-    Note currentNote = startingNote;
-    int i;
-    for (i = 0; i < 3; i++) {
-        Sequencer_fillSlot(Sequencer_getSlotIndex(i * 2, 0, 0),
-                           NOTE_CTRL_NOTE_STOCCATO,
+    int beatIdx = 1;
+    for (; i < 4 && i >= 0; i += step) {
+        Note normedChord = notesInChord[i] % 12;
+        if (notesInChord[i] == NOTE_NONE || normedChord == first) {
+            continue;
+        }
+
+        currentNote += _noteSignedRingDistance(currentNote, notesInChord[i]);
+        Sequencer_fillSlot(startIdx + (beatIdx * 2), // eighth notes
+                           NOTE_CTRL_NOTE_ON,
                            currentNote,
                            NULL);
+        beatIdx++;
+    }
+    _lastNotePlayed = currentNote;
+    return beatIdx;
+}
 
-        // TODO: Clean this up as done with note in chord fn
-        int mod = SIGNOF(randInRange(-2, 2));
-        // if (mod != 0) {
-        Note stripped = currentNote % 12;
-        int oct = currentNote / 12;
+static const Chord*
+_selectChordProgression(const MelodyGenKey key)
+{
+    int idx = randInRange(0, 4);
+    return (key == KEY_MAJOR) ? majorProgressions[idx] : minorProgressions[idx];
+}
 
-        int idx = 0;
-        for (int j = 0; j < 7; j++) {
-            if (majorScale[j] == stripped) {
-                idx = j;
+static Note
+_getPassingTone(const Note from, const int direction)
+{
+    Note stripped = from % 12;
+
+    int noteIdx;
+    for (noteIdx = 0; noteIdx < 7; noteIdx++) {
+        if (majorScale[noteIdx] == stripped) {
+            break;
+        }
+    }
+
+    noteIdx += direction;
+    if (noteIdx < 0) {
+        noteIdx += 7;
+    } else if (noteIdx >= 7) {
+        noteIdx -= 7;
+    }
+
+    return from + _noteSignedRingDistance(stripped, majorScale[noteIdx]);
+}
+
+void
+Melody_generateToSequencer(const MelodyGenParams* params)
+{
+    Sequencer_setBpm(params->tempo);
+
+    const Chord* prog = _selectChordProgression(params->key);
+
+    Note currentNote = NOTE_NONE;
+
+    for (int i = 0; i < 4; i++) { // for each beat
+        int beatIdx = Sequencer_getSlotIndex(i * 2, 0, 0);
+
+        // bring us back if we got too high or low
+        if (_lastNotePlayed != NOTE_NONE &&
+            (_lastNotePlayed < 0 || _lastNotePlayed > B6)) {
+            _lastNotePlayed = _closestInChord(prog[i], NOTE_NONE, 0);
+        }
+
+        int direction = _randomTest(params->upDownTendency) ? 1 : -1;
+        bool jumpy = _randomTest(params->jumpChance);
+        bool dense = _randomTest(params->noteDensity);
+        FmPlayer_NoteCtrl noteCtrl = _randomTest(params->stoccatoLegatoTendency)
+                                       ? NOTE_CTRL_NOTE_STOCCATO
+                                       : NOTE_CTRL_NOTE_ON;
+
+        // on-beat
+        if (jumpy) {
+            if (dense && _randomTest(0.5)) {
+                int notesAdded = _arpeggiateChord(
+                  beatIdx, prog[i], _lastNotePlayed, direction);
+                if (notesAdded < 4) {
+                    Note passingTone =
+                      _getPassingTone(_lastNotePlayed, direction);
+
+                    Sequencer_fillSlot(
+                      beatIdx + 6, noteCtrl, passingTone, NULL);
+                    _lastNotePlayed = passingTone;
+                }
+                // we're full up
+                continue;
+            } else {
+                // furthest up = closest down and vice versa
+                currentNote =
+                  _closestInChord(prog[i], _lastNotePlayed, -direction);
+                if (_lastNotePlayed != NOTE_NONE) {
+                    currentNote += HALF_STEPS_IN_OCTAVE * direction;
+                }
+                Sequencer_fillSlot(beatIdx, noteCtrl, currentNote, NULL);
+            }
+        } else {
+            currentNote = _closestInChord(prog[i], _lastNotePlayed, direction);
+            Sequencer_fillSlot(beatIdx, noteCtrl, currentNote, NULL);
+        }
+
+        // fill the rest of the 2 beats
+        for (int j = 1; j < 4; j++) {
+            // try to keep passing tones on off-beats and chord notes on
+            // on-beats
+            if (_randomTest(params->noteDensity)) {
+                currentNote =
+                  (j % 2 == 0)
+                    ? _closestInChord(prog[i], currentNote, direction)
+                    : _getPassingTone(currentNote, direction);
+                Sequencer_fillSlot(
+                  beatIdx + (j * 2), noteCtrl, currentNote, NULL);
+            } else {
+                Sequencer_fillSlot(
+                  beatIdx + (j * 2), NOTE_CTRL_NOTE_OFF, NOTE_NONE, NULL);
             }
         }
-
-        idx += mod;
-        if (idx < 0) {
-            idx += 7;
-            oct -= 1;
-        }
-
-        if (idx >= 7) {
-            idx -= 7;
-            oct += 1;
-        }
-
-        currentNote = majorScale[idx] + (oct * 12);
-
-        Sequencer_fillSlot(Sequencer_getSlotIndex((i * 2) + 1, 0, 0),
-                           NOTE_CTRL_NOTE_STOCCATO,
-                           currentNote,
-                           NULL);
-        //}
-
-        // get the next chord and find the closest note
-        if (randInRange(0, 2)) {
-            printf("going FURTHEST UP\n");
-            // try furthest up in chord, which equals closest down + 12
-            currentNote = _closestInChord(prog[i + 1], currentNote, -1) + 12;
-        } else {
-            printf("going FURTHEST DOWN\n");
-            currentNote = _closestInChord(prog[i + 1], currentNote, 1);
-        }
+        _lastNotePlayed = currentNote;
     }
-    // add the last one
-    Sequencer_fillSlot(Sequencer_getSlotIndex(i * 2, 0, 0),
-                       NOTE_CTRL_NOTE_STOCCATO,
-                       currentNote,
-                       NULL);
 }

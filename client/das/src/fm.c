@@ -46,11 +46,15 @@ typedef struct
     Note note;
     /** The base frequency. */
     float baseFreq;
+
+    float env;
     /** CM ratio of the operators. */
     float opCM[FM_OPERATORS];
 
     /** Operator ADSRs. */
     Env_Envelope opAdsr[FM_OPERATORS];
+
+    Env_Envelope mainEnvelope;
 
 } _FmSynth;
 
@@ -130,6 +134,10 @@ _configure(_FmSynth* synth, const FmSynthParams* params, bool initialize)
             synth->sampleRate = params->sampleRate;
         }
 
+        synth->mainEnvelope = params->envelope;
+        Env_prepareEnvelope(&synth->mainEnvelope,
+                            synth->sampleRate / ADSR_UPDATES_PER_SEC);
+
         for (int op = 0; op < FM_OPERATORS; op++) {
             const OperatorParams* opParams = &params->opParams[op];
 
@@ -203,16 +211,27 @@ _setOperatorCM(_FmSynth* synth, FmOperator op, float ratio, Note fixTo)
 }
 
 static void
+_updateEnvelopes(_FmSynth* synth)
+{
+    synth->env = Env_getValueAndAdvance(&synth->mainEnvelope);
+    for (int op = 0; op < FM_OPERATORS; op++) {
+        synth->opEnvelope[op] = Env_getValueAndAdvance(&synth->opAdsr[op]);
+    }
+}
+
+static void
 _noteOn(_FmSynth* synth)
 {
     for (int op = 0; op < FM_OPERATORS; op++) {
         Env_trigger(&synth->opAdsr[op]);
     }
+    Env_trigger(&synth->mainEnvelope);
 }
 
 static void
 _noteOff(_FmSynth* synth)
 {
+    Env_gate(&synth->mainEnvelope);
     for (int op = 0; op < FM_OPERATORS; op++) {
         Env_gate(&synth->opAdsr[op]);
     }
@@ -325,10 +344,7 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
 
         // If we need to, update the ADSR envelope and triggers.
         if (s % ADSR_UPDATES_PER_SEC == 0) {
-            for (int op = 0; op < FM_OPERATORS; op++) {
-                synth->opEnvelope[op] =
-                  Env_getValueAndAdvance(&synth->opAdsr[op]);
-            }
+            _updateEnvelopes(synth);
         }
 
         // Mix together the operators that are wired to output.
@@ -336,11 +352,11 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
         for (int op = 0; op < FM_OPERATORS; op++) {
             finalSample += opSamples[op] * synth->opOutput[op];
 
-            // TODO remove this printing
             if (finalSample >= 1) {
                 fprintf(stderr, "WARN: sample greater than 1!\n");
+                finalSample = 1;
             }
         }
-        sampleBuf[s] = finalSample * INT16_MAX;
+        sampleBuf[s] = (synth->env * finalSample) * INT16_MAX;
     }
 }

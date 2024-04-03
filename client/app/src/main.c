@@ -15,23 +15,30 @@
 #include <time.h>
 #include <unistd.h>
 
+static MelodyGenParams melodyParams = { .tempo = TEMPO_SLOW,
+                                        .key = KEY_MINOR,
+                                        .jumpChance = 0.9,
+                                        .noteDensity = 0.5,
+                                        .upDownTendency = 0.6,
+                                        .stoccatoLegatoTendency = 0.6 };
+
 static void
 _sequencerLoopCallback(void)
 {
     printf("Resetting...\n");
     Sequencer_clear();
-    Melody_generateToSequencer();
+    Melody_generateToSequencer(&melodyParams);
 }
 
 int
 main(void)
 {
     srand(time(NULL));
-    FmPlayer_initialize(&FM_CHIRP_PARAMS);
+    FmPlayer_initialize(&FM_BASS_PARAMS);
 
     Sequencer_initialize(220, _sequencerLoopCallback);
 
-    Melody_generateToSequencer();
+    Melody_generateToSequencer(&melodyParams);
 
     Sequencer_start();
 
