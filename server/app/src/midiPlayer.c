@@ -1,22 +1,21 @@
-#include <errno.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <pthread.h>
-#include <stdatomic.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/mman.h>
+#include <stdatomic.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <limits.h>
 
 #include "hal/timeutils.h"
-#include "lib/midi-parser.h"
 #include "midiPlayer.h"
+#include "lib/midi-parser.h"
 #include "tcp.h"
 
-struct MidiEventNode
-{
+struct MidiEventNode {
     struct MidiEventNode* next;
     int channel;
     unsigned int status;
@@ -35,17 +34,36 @@ static int bpm = 90;
 
 static pthread_t playerThread;
 
-static struct MidiEventNode* channelHeads[16] = { 0 };
-static struct MidiEventNode* currentEventNodes[16] = { 0 };
+static struct MidiEventNode* channelHeads[16] = {0};
+static struct MidiEventNode* currentEventNodes[16] = {0};
+static int instruments[16] = {0};
 
-static int listeners[16] = { -1 };
+// I really don't wanna malloc this array
+static int listeners[16][3] = {
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1},
+  {-1,-1,-1}
+};
 
 static int serverInstance = 42;
 
 static long long
 vTimeInNs(long long vtime)
 {
-    return (long long)(vtime * (60000000000 / (bpm * ppq)));
+  return (long long)(vtime * (60000000000 / (bpm * ppq)));
 }
 
 static void
@@ -53,199 +71,226 @@ onMessageRecieved(void* instance, const char* newMessage, int socketFd)
 {
     (void)instance;
 
-    char buffer[MAX_LEN] = { 0 };
+    char buffer[MAX_LEN] = {0};
     strncpy(buffer, newMessage, MAX_LEN - 1);
     char* command = strtok(buffer, " ");
     (void)(command);
     int channel = atoi(strtok(NULL, " "));
 
     printf("Registering new socket to send to for channel %d\n", channel);
-    listeners[channel] = socketFd;
+
+    // Bad channel
+    if(channelHeads[channel] == NULL) {
+      for(int i = 0; i < 16; i++) {
+        if(channelHeads[i] != NULL) {
+          printf("Tried to join invalid channel %d. Had to fallback to %d\n", channel, i);
+          channel = i;
+          break;
+        }
+      }
+    }
+    
+    for(int j = 0; j < 3; j++) {
+      if(listeners[channel][j] == -1) {
+
+        char buffer[MAX_LEN] = {0};
+        snprintf(buffer, MAX_LEN - 1, "%d;%d", MIDI_STATUS_PGM_CHANGE, instruments[channel]);
+        Tcp_sendTcpServerResponse(buffer, socketFd);
+
+        listeners[channel][j] = socketFd;
+        return;
+      }
+    }
+    
+    printf("Somehow there was no room to register. This shouldn't be possible.\n");
 }
 
+
 static void
-clearNode(struct MidiEventNode* node)
+clearNode(struct MidiEventNode* node, struct MidiEventNode* head, bool firstTime)
 {
-    if (node == NULL) {
+    if(node == NULL || (!firstTime && node == head)) {
         return;
     }
 
-    clearNode(node->next);
+    clearNode(node->next, head, false);
     free(node);
 }
 
 static void
 clearAllEventNodes()
 {
-    for (int i = 0; i < 16; i++) {
-        clearNode(channelHeads[i]);
+    for(int i = 0; i < 16; i++) {
+      clearNode(channelHeads[i], channelHeads[i], true);
+      channelHeads[i] = NULL;
     }
 }
 
-static void
-makeLinkedListLoop(struct MidiEventNode* currentMidiHead)
+static void makeLinkedListLoop(struct MidiEventNode* currentMidiHead)
 {
-    if (currentMidiHead == NULL) {
-        // perror("Midi head is null when trying to make loop\n");
-        return;
-    } else {
-        printf("Making channel %d loop because it is valid\n",
-               currentMidiHead->channel);
+    if(currentMidiHead == NULL) {
+      //perror("Midi head is null when trying to make loop\n");
+      return;
+    }
+    else {
+      printf("Making channel %d loop because it is valid\n", currentMidiHead->channel);
     }
 
     struct MidiEventNode* current = currentMidiHead;
-    while (current->next != NULL) {
-        current = current->next;
+    while(current->next != NULL) {
+      current = current->next;
     }
     current->next = currentMidiHead;
 }
 
-static void
-parse_and_dump(struct midi_parser* parser, long long* trackLengths)
+static void parse_and_dump(struct midi_parser *parser, long long* trackLengths)
 {
-    clearAllEventNodes();
-    struct MidiEventNode* prev[16] = { 0 };
-    enum midi_parser_status status;
+  clearAllEventNodes();
+  struct MidiEventNode* prev[16] = {0};
+  enum midi_parser_status status;
 
-    while (1) {
-        status = midi_parse(parser);
-        switch (status) {
+  while (1) {
+    status = midi_parse(parser);
+    switch (status) {
 
-            case MIDI_PARSER_EOB:
-                return;
+      case MIDI_PARSER_EOB:
+        return;
 
-            case MIDI_PARSER_ERROR:
-                printf("Error during midi parsing");
-                return;
+      case MIDI_PARSER_ERROR:
+        printf("Error during midi parsing");
+        return;
 
-            case MIDI_PARSER_HEADER:
-                printf("header\n");
-                printf("  size: %d\n", parser->header.size);
-                printf("  format: %d [%s]\n",
-                       parser->header.format,
-                       midi_file_format_name(parser->header.format));
-                printf("  tracks count: %d\n", parser->header.tracks_count);
-                printf("  time division: %d\n", parser->header.time_division);
-                ppq = parser->header.time_division;
-                break;
+      case MIDI_PARSER_HEADER:
+        printf("header\n");
+        printf("  size: %d\n", parser->header.size);
+        printf("  format: %d [%s]\n", parser->header.format, midi_file_format_name(parser->header.format));
+        printf("  tracks count: %d\n", parser->header.tracks_count);
+        printf("  time division: %d\n", parser->header.time_division);
+        ppq = parser->header.time_division;
+        break;
 
-            case MIDI_PARSER_TRACK_MIDI:
+      case MIDI_PARSER_TRACK_MIDI:
 
-                // Keep track of longest track for adding a buffer at the end
-                trackLengths[parser->midi.channel] += parser->vtime;
+        // Keep track of longest track for adding a buffer at the end
+        trackLengths[parser->midi.channel] += parser->vtime;
 
-                struct MidiEventNode* eventNode =
-                  malloc(sizeof(struct MidiEventNode));
-                int channel = parser->midi.channel;
-                eventNode->status = parser->midi.status;
-                eventNode->vtime = parser->vtime;
-                eventNode->currentVTime = parser->vtime;
-                eventNode->param1 = parser->midi.param1;
-                eventNode->param2 = parser->midi.param2;
-                eventNode->channel = parser->midi.channel;
-                eventNode->next = NULL;
+        struct MidiEventNode* eventNode = malloc(sizeof(struct MidiEventNode));
+        int channel = parser->midi.channel;
+        eventNode->status = parser->midi.status;
+        eventNode->vtime = parser->vtime;
+        eventNode->currentVTime = parser->vtime;
+        eventNode->param1 = parser->midi.param1;
+        eventNode->param2 = parser->midi.param2;
+        eventNode->channel = parser->midi.channel;
+        eventNode->next = NULL;
 
-                if (channelHeads[channel] == NULL) {
-                    channelHeads[channel] = eventNode;
-                } else {
-                    prev[channel]->next = eventNode;
-                }
-
-                prev[channel] = eventNode;
-                break;
-
-            case MIDI_PARSER_TRACK:
-                break;
-
-            case MIDI_PARSER_TRACK_SYSEX:
-                break;
-
-            case MIDI_PARSER_TRACK_META:
-                break;
-
-            default:
-                printf("unhandled midi state: %d\n", status);
-                return;
+        if(channelHeads[channel] == NULL) {
+          channelHeads[channel] = eventNode;
         }
+        else {
+          prev[channel]->next = eventNode;
+        }
+
+        prev[channel] = eventNode;
+        break;
+
+      case MIDI_PARSER_TRACK:
+        break;
+
+      case MIDI_PARSER_TRACK_SYSEX:
+        break;
+
+      case MIDI_PARSER_TRACK_META:
+        break;
+
+      default:
+        printf("unhandled midi state: %d\n", status);
+        return;
     }
+  }
 }
 
 static int
-parseMidiFileChannel(const char* path)
+parseMidiFile(const char *path)
 {
-    struct stat st;
+  struct stat st;
 
-    if (stat(path, &st)) {
-        printf("stat(%s):\n", path);
-        return 1;
-    }
+  if(access(path, F_OK) != 0) {
+    printf("MIDI file not found\n");
+    return 1;
+  }
 
-    int fd = open(path, O_RDONLY);
-    if (fd < 0) {
-        printf("open(%s):\n", path);
-        return 1;
-    }
+  if (stat(path, &st)) {
+    printf("stat(%s):\n", path);
+    return 1;
+  }
 
-    void* mem = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
-    if (mem == MAP_FAILED) {
-        printf("mmap(%s):\n", path);
-        close(fd);
-        return 1;
-    }
+  int fd = open(path, O_RDONLY);
+  if (fd < 0) {
+    printf("open(%s):\n", path);
+    return 1;
+  }
 
-    struct midi_parser parser;
-    parser.state = MIDI_PARSER_INIT;
-    parser.size = st.st_size;
-    parser.in = mem;
-
-    long long trackLengths[16] = { 0 };
-
-    parse_and_dump(&parser, trackLengths);
-
-    long long longestTrackLength = 0;
-
-    for (int i = 0; i < 16; i++) {
-        longestTrackLength = trackLengths[i] > longestTrackLength
-                               ? trackLengths[i]
-                               : longestTrackLength;
-    }
-
-    for (int i = 0; i < 16; i++) {
-
-        if (channelHeads[i] == NULL) {
-            continue;
-        }
-
-        long long padding = longestTrackLength - trackLengths[i];
-        struct MidiEventNode* current = channelHeads[i];
-
-        // Create padding node and add to the end of the midi nodes
-        struct MidiEventNode* paddingNode =
-          malloc(sizeof(struct MidiEventNode));
-        paddingNode->status = MIDI_STATUS_NOTE_OFF;
-        paddingNode->vtime = padding;
-        paddingNode->param1 = 0;
-        paddingNode->param2 = 0;
-        paddingNode->next = NULL;
-        paddingNode->channel = i;
-
-        while (current->next != NULL) {
-            current = current->next;
-        }
-
-        current->next = paddingNode;
-    }
-
-    munmap(mem, st.st_size);
+  void *mem = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+  if (mem == MAP_FAILED) {
+    printf("mmap(%s):\n", path);
     close(fd);
-    return 0;
+    return 1;
+  }
+
+  struct midi_parser parser;
+  parser.state = MIDI_PARSER_INIT;
+  parser.size  = st.st_size;
+  parser.in    = mem;
+
+  long long trackLengths[16] = {0};
+
+  parse_and_dump(&parser, trackLengths);
+
+  long long longestTrackLength = 0;
+
+  for(int i = 0; i < 16; i++) {
+    longestTrackLength = trackLengths[i] > longestTrackLength ? trackLengths[i] : longestTrackLength;
+  }
+
+  for(int i = 0; i < 16; i++) {
+
+    if(channelHeads[i] == NULL) {
+      continue;
+    }
+
+    long long padding = longestTrackLength - trackLengths[i];
+    struct MidiEventNode* current = channelHeads[i];
+
+    // Create padding node and add to the end of the midi nodes
+    struct MidiEventNode* paddingNode = malloc(sizeof(struct MidiEventNode));
+    paddingNode->status = MIDI_STATUS_NOTE_OFF;
+    paddingNode->vtime = padding;
+    paddingNode->param1 = 1;
+    paddingNode->param2 = 1;
+    paddingNode->next = NULL;
+    paddingNode->channel = i;
+
+    while(current->next != NULL) {
+      current = current->next;
+    }
+
+    current->next = paddingNode;
+  }
+
+
+  munmap(mem, st.st_size);
+  close(fd);
+  return 0;
 }
 
 void
 MidiPlayer_initialize()
 {
-    for (int i = 0; i < 16; i++) {
-        listeners[i] = -1;
+    for(int i = 0; i < 16; i++) {
+      for(int j = 0; j < 3; j++) {
+        listeners[i][j] = -1;
+      }
     }
 
     TcpObserver exampleObserver;
@@ -268,76 +313,78 @@ void
 MidiPlayer_playMidiFile(char* path)
 {
     readyToPlay = false;
-    parseMidiFileChannel(path);
 
-    for (int i = 0; i < 16; i++) {
-        makeLinkedListLoop(channelHeads[i]);
-        currentEventNodes[i] = channelHeads[i];
+    clearAllEventNodes();
+    int res = parseMidiFile(path);
+
+    if(res == 1) {
+      return;
     }
 
-    for (int j = 0; j < 10; j++) {
-        for (int i = 0; i < 1; i++) {
-            currentEventNodes[i] = currentEventNodes[i]->next;
-        }
+    for(int i = 0; i < 16; i++) {
+      makeLinkedListLoop(channelHeads[i]);
+      currentEventNodes[i] = channelHeads[i];
     }
-
+    
     readyToPlay = true;
 }
 
 void
 MidiPlayer_setBpm(int newBpm)
 {
-    bpm = newBpm;
+  bpm = newBpm;
 }
 
 void*
 midiPlayerWorker(void* p)
 {
-    (void)p;
+  (void)p;
 
-    while (running) {
-        if (!readyToPlay) {
-            continue;
-        }
-
-        long long shortestVTime = LLONG_MAX;
-
-        for (int i = 0; i < 16; i++) {
-            if (channelHeads[i] != NULL) {
-                shortestVTime =
-                  currentEventNodes[i]->currentVTime < shortestVTime
-                    ? currentEventNodes[i]->currentVTime
-                    : shortestVTime;
-            }
-        }
-
-        Timeutils_sleepForNs(vTimeInNs(shortestVTime));
-
-        for (int i = 0; i < 16; i++) {
-            if (channelHeads[i] != NULL) {
-                if (currentEventNodes[i]->currentVTime == shortestVTime) {
-                    currentEventNodes[i]->currentVTime =
-                      currentEventNodes[i]->vtime;
-
-                    if (listeners[i] != -1) {
-                        // Play this event
-                        char buffer[MAX_LEN] = { 0 };
-                        snprintf(buffer,
-                                 MAX_LEN - 1,
-                                 "%d;%d",
-                                 currentEventNodes[i]->status,
-                                 currentEventNodes[i]->param1);
-                        Tcp_sendTcpServerResponse(buffer, listeners[i]);
-                        printf("channel %d sent to: %s\n", i, buffer);
-                    }
-
-                    currentEventNodes[i] = currentEventNodes[i]->next;
-                } else {
-                    currentEventNodes[i]->currentVTime -= shortestVTime;
-                }
-            }
-        }
+  while(running) {
+    if(!readyToPlay) {
+      continue;
     }
 
-    return NULL;
+    long long shortestVTime = LLONG_MAX;
+
+    for(int i = 0; i < 16; i++) {
+      if(channelHeads[i] != NULL) {
+        shortestVTime = currentEventNodes[i]->currentVTime < shortestVTime ? currentEventNodes[i]->currentVTime : shortestVTime;
+      }
+    }
+
+    Timeutils_sleepForNs(vTimeInNs(shortestVTime));
+
+    for(int i = 0; i < 16; i++) {
+      if(channelHeads[i] != NULL) {
+        if(currentEventNodes[i]->currentVTime == shortestVTime) {
+          currentEventNodes[i]->currentVTime = currentEventNodes[i]->vtime;
+          
+          if(currentEventNodes[i]->status == MIDI_STATUS_PGM_CHANGE) {
+            printf("Instrument for channel %d is now %d\n", i, currentEventNodes[i]->param1);
+            instruments[i] = currentEventNodes[i]->param1;
+          }
+
+          for(int j = 0; j < 3; j++) {
+            char buffer[MAX_LEN] = {0};
+            snprintf(buffer, MAX_LEN - 1, "%d;%d", currentEventNodes[i]->status, currentEventNodes[i]->param1);
+            if(listeners[i][j] != -1) {
+              int res = Tcp_sendTcpServerResponse(buffer, listeners[i][j]);
+              if(res == -1) {
+                printf("Channel %d #%d disconnected\n", i, j);
+                listeners[i][j] = -1;
+              }
+            }
+          }
+          
+          currentEventNodes[i] = currentEventNodes[i]->next;
+        }
+        else {
+          currentEventNodes[i]->currentVTime -= shortestVTime;
+        }
+      }
+    }
+  }
+
+  return NULL;
 }

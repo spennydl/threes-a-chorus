@@ -16,6 +16,12 @@
 
 #include "tcp.h"
 
+struct ConnectionData
+{
+    int socketFd;
+    int connectionIndex;
+};
+
 // Linked list of observers so we don't have to do array expansion or anything
 struct ListNode
 {
@@ -31,11 +37,8 @@ static int socketDescriptor;
 pthread_t tcpServerThreadId;
 static atomic_bool tcpServerRunning = true;
 
-static atomic_int connections = 0;
-
-// TODO: Turn this into a pool so we can reuse threads!
+bool connectionActive[MAX_CONNECTIONS] = {0};
 pthread_t connectionThreads[MAX_CONNECTIONS];
-
 
 static void
 sendMessageToObservers(char* message, int socketFd)
@@ -81,13 +84,13 @@ Tcp_initializeTcpServer()
     if(socketDescriptor < 0) 
     {
         printf("Error creating TCP socket during initialization!\n");
-        return;
+        exit(0);
     }
 
     if(bind(socketDescriptor, (struct sockaddr*)&tcp_sin, sizeof(tcp_sin)) < 0)
     {
         printf("Error binding to socket during TCP server initialization!\n");
-        return;
+        exit(0);
     }
 
     listen(socketDescriptor, 5);
@@ -111,7 +114,7 @@ Tcp_sendTcpServerResponse(const char* message, int socketFd)
 {
     char msg[MAX_LEN] = {0};
     strncpy(msg, message, strlen(message));
-    return send(socketFd, msg, MAX_LEN, 0);
+    return send(socketFd, msg, MAX_LEN, MSG_NOSIGNAL);
 }
 
 ssize_t
@@ -186,9 +189,12 @@ Tcp_attachToTcpServer(const TcpObserver* observer)
 }
 
 static void*
-tcpServerConnectionHandler(void* socketFdArg)
+tcpServerConnectionHandler(void* dataPointer)
 {
-    int socketFd = (int)(uintptr_t)socketFdArg;
+    struct ConnectionData data = *(struct ConnectionData*)dataPointer;
+
+    int socketFd = data.socketFd;
+    int connectionIndex = data.connectionIndex;
     bool connectionOpen = true;
 
     char buffer[MAX_LEN];
@@ -204,10 +210,17 @@ tcpServerConnectionHandler(void* socketFdArg)
     sendMessageToObservers(buffer, socketFd);
 
     while(tcpServerRunning && connectionOpen) {
-        
+        int error;
+        socklen_t len = sizeof(error);
+        int ret = getsockopt(socketFd, SOL_SOCKET, SO_ERROR, &error, &len);
+
+        if(ret != 0 || error != 0) {
+            connectionOpen = false;
+        }
     }
 
     close(socketFd);
+    connectionActive[connectionIndex] = false;
 
     return NULL;
 }
@@ -231,15 +244,25 @@ tcpServerWorker(void* p)
             continue;
         }
 
-        if(connections > 16) {
-            printf("Error: Cannot have more than %d connection threads! Closing incoming connection.\n", MAX_CONNECTIONS);
-            close(socketFd);
+        int connectionIndex = -1;
+        for(int i = 0; i < MAX_CONNECTIONS; i++) {
+            if(!connectionActive[i]) {
+                connectionIndex = i;
+                break;
+            }
+        }
+
+        if(connectionIndex == -1) {
+            printf("Could not find available thread for connection\n");
             continue;
         }
 
-        pthread_create(&connectionThreads[connections], NULL, tcpServerConnectionHandler, (void*)(uintptr_t)socketFd);
-        pthread_detach(connectionThreads[connections]);
-        connections++;
+        struct ConnectionData data;
+        data.connectionIndex = connectionIndex;
+        data.socketFd = socketFd;
+
+        pthread_create(&connectionThreads[connectionIndex], NULL, tcpServerConnectionHandler, (void*)&data);
+        pthread_detach(connectionThreads[connectionIndex]);
     }
 
     return NULL;
