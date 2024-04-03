@@ -57,6 +57,7 @@ typedef struct
     float current;
     float gatePoint;
     float repeatPoint;
+    float min;
     long lengthMs;
 
     Pwl_Function fn;

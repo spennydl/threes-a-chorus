@@ -222,7 +222,13 @@ _updateEnvelopes(_FmSynth* synth)
 static void
 _noteOn(_FmSynth* synth)
 {
+    if (Env_isTriggered(&synth->mainEnvelope)) {
+        Env_gate(&synth->mainEnvelope);
+    }
     for (int op = 0; op < FM_OPERATORS; op++) {
+        if (Env_isTriggered(&synth->opAdsr[op])) {
+            Env_gate(&synth->opAdsr[op]);
+        }
         Env_trigger(&synth->opAdsr[op]);
     }
     Env_trigger(&synth->mainEnvelope);

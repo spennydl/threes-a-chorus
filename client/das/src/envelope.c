@@ -29,7 +29,14 @@ Env_getValueAndAdvance(Env_Envelope* env)
     float value = 0;
     if (env->state & ENV_TRIGGER_BIT) {
         float x = env->current;
+        float min = env->min;
+
         value = Pwl_sample(&env->fn, x);
+        if (value < min) {
+            value = min;
+        } else {
+            min = -1;
+        }
 
         x += env->step;
 
@@ -47,6 +54,7 @@ Env_getValueAndAdvance(Env_Envelope* env)
         }
 
         env->current = x;
+        env->min = min;
     }
     return value;
 }
@@ -54,6 +62,9 @@ Env_getValueAndAdvance(Env_Envelope* env)
 void
 Env_trigger(Env_Envelope* env)
 {
+    if (Env_isTriggered(env)) {
+        env->min = Pwl_sample(&env->fn, env->current);
+    }
     env->current = 0;
     env->state = ENV_TRIGGER_BIT;
 }
