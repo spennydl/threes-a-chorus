@@ -1,16 +1,16 @@
 // Main program to build the application
 // Has main(); does initialization and cleanup and perhaps some basic logic.
 
-#include <stdlib.h>
+#include <arpa/inet.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <arpa/inet.h>
-#include <sys/stat.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
-#include "tcp.h"
 #include "midiPlayer.h"
+#include "tcp.h"
 
 int
 main()
@@ -21,9 +21,9 @@ main()
 
     MidiPlayer_playMidiFile("overworld.mid");
 
-    while(1) {
+    while (1) {
         char input[32];
-        printf("Enter exit to quit, file name, or a number for bpm: ");
+        printf("Enter exit to quit, file name, orcd  a number for bpm: ");
         scanf("%s", input);
 
         if(strcmp(input, "exit") == 0) {
