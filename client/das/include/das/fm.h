@@ -152,8 +152,6 @@ typedef struct
      */
     size_t sampleRate;
 
-    Env_Envelope envelope;
-
     /**
      * @brief Operator paramters.
      */
@@ -169,10 +167,6 @@ typedef struct
  */
 static const FmSynthParams FM_DEFAULT_PARAMS = {
     .sampleRate = 44100,
-    .envelope = { .gatePoint = 0.65,
-                  .repeatPoint = -1,
-                  .lengthMs = 2500,
-                  .fn = PWL_ADSR_PLUCK_FUNCTION },
     .opParams = { { .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
                     .outputStrength = 1.0,
@@ -210,10 +204,6 @@ static const FmSynthParams FM_DEFAULT_PARAMS = {
 
 static const FmSynthParams FM_BELL_PARAMS = {
     .sampleRate = 44100,
-    .envelope = { .gatePoint = 0.65,
-                  .repeatPoint = -1,
-                  .lengthMs = 2500,
-                  .fn = PWL_BELLSTRIKE_FUNCTION },
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
@@ -256,10 +246,6 @@ static const FmSynthParams FM_BELL_PARAMS = {
 
 static const FmSynthParams FM_CHIME_PARAMS = {
     .sampleRate = 44100,
-    .envelope = { .gatePoint = 0.65,
-                  .repeatPoint = -1,
-                  .lengthMs = 2500,
-                  .fn = PWL_BELLSTRIKE_FUNCTION },
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0 / 5,
@@ -305,10 +291,6 @@ static const FmSynthParams FM_CHIME_PARAMS = {
  */
 static const FmSynthParams FM_AHH_PARAMS = {
     .sampleRate = 44100,
-    .envelope = { .gatePoint = 0.65,
-                  .repeatPoint = -1,
-                  .lengthMs = 1000,
-                  .fn = PWL_ADSR_AHH_FUNCTION },
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
@@ -352,10 +334,6 @@ static const FmSynthParams FM_AHH_PARAMS = {
 
 static const FmSynthParams FM_BASS_PARAMS = {
     .sampleRate = 44100,
-    .envelope = { .gatePoint = 0.65,
-                  .repeatPoint = -1,
-                  .lengthMs = 900,
-                  .fn = PWL_ADSR_PLUCK_FUNCTION },
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0 / 2,
@@ -398,10 +376,6 @@ static const FmSynthParams FM_BASS_PARAMS = {
 
 static const FmSynthParams FM_YOI_PARAMS = {
     .sampleRate = 44100,
-    .envelope = { .gatePoint = 0.65,
-                  .repeatPoint = -1,
-                  .lengthMs = 1500,
-                  .fn = PWL_ADSR_PLUCK_FUNCTION },
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
@@ -444,10 +418,6 @@ static const FmSynthParams FM_YOI_PARAMS = {
 
 static const FmSynthParams FM_BIG_PARAMS = {
     .sampleRate = 44100,
-    .envelope = { .gatePoint = 0.65,
-                  .repeatPoint = -1,
-                  .lengthMs = 1500,
-                  .fn = PWL_ADSR_PLUCK_FUNCTION },
     .opParams = { {
                     .waveType = WAVETYPE_SQUARE,
                     .CmRatio = 1.0,
@@ -492,10 +462,6 @@ static const FmSynthParams FM_BIG_PARAMS = {
 
 static const FmSynthParams FM_BEEPBOOP_PARAMS = {
     .sampleRate = 44100,
-    .envelope = { .gatePoint = 0.5,
-                  .repeatPoint = -1,
-                  .lengthMs = 1600,
-                  .fn = PWL_SWELL_FUNCTION },
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
@@ -539,10 +505,6 @@ static const FmSynthParams FM_BEEPBOOP_PARAMS = {
 
 static const FmSynthParams FM_SHINYDRONE_PARAMS = {
     .sampleRate = 44100,
-    .envelope = { .gatePoint = 0.5,
-                  .repeatPoint = -1,
-                  .lengthMs = 1600,
-                  .fn = PWL_SWELL_FUNCTION },
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 3.0,
@@ -586,10 +548,6 @@ static const FmSynthParams FM_SHINYDRONE_PARAMS = {
 
 static const FmSynthParams FM_CHIRP_PARAMS = {
     .sampleRate = 44100,
-    .envelope = { .gatePoint = 0.65,
-                  .repeatPoint = -1,
-                  .lengthMs = 800,
-                  .fn = PWL_BELLSTRIKE_FUNCTION },
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 2.0,

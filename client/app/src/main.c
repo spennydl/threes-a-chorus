@@ -17,10 +17,10 @@
 
 static MelodyGenParams melodyParams = { .tempo = TEMPO_SLOW,
                                         .key = KEY_MINOR,
-                                        .jumpChance = 0.9,
-                                        .noteDensity = 0.5,
+                                        .jumpChance = 0.2,
+                                        .noteDensity = 0.1,
                                         .upDownTendency = 0.6,
-                                        .stoccatoLegatoTendency = 0.6 };
+                                        .stoccatoLegatoTendency = 0.2 };
 
 static void
 _sequencerLoopCallback(void)
@@ -34,7 +34,7 @@ int
 main(void)
 {
     srand(time(NULL));
-    FmPlayer_initialize(&FM_BASS_PARAMS);
+    FmPlayer_initialize(&FM_AHH_PARAMS);
 
     Sequencer_initialize(220, _sequencerLoopCallback);
 

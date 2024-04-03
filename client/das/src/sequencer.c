@@ -127,11 +127,8 @@ _sequencer(void* _data)
                 pthread_rwlock_unlock(&_seqLock);
 
                 if (currentPos + 1 >= SEQUENCER_SLOTS) {
-                    printf("resetting sequencer\n");
                     seq->playbackPosition = 0;
                     if (seq->loopCallback) {
-                        printf("calling the thing \n");
-
                         seq->loopCallback();
                     }
                 } else {
