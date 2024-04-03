@@ -4,6 +4,7 @@
 #include <poll.h>
 #include <stdio.h>
 
+#include "beatsync.h"
 #include "com/timeutils.h"
 #include "das/fm.h"
 #include "das/fmplayer.h"
@@ -43,7 +44,7 @@ main(void)
     Sequencer_start();
 
     struct pollfd stdinp = { .fd = STDIN_FILENO, .events = POLLIN | POLLPRI };
-    while (true) {
+    while (1) {
         int poll_status;
         if ((poll_status = poll(&stdinp, 1, 0)) < 0) {
             // I'm not sure this is likely to happen. If it does we'll
