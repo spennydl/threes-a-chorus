@@ -282,7 +282,6 @@ static const double squareTable[] = {
     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    0.0
 };
 
 static const double sawTable[] = { 0,
@@ -549,7 +548,7 @@ WaveTable_sample(WaveType type, double angle)
     double idxLow;
     double idxFrac = modf(idxExact, &idxLow);
     int idx = idxLow;
-    int nextIdx = (idx < (WT_N_SAMPLES - 1)) ? idx + 1 : 0; // wrap it around!
+    int nextIdx = (idx < (WT_N_SAMPLES - 1)) ? idx + 1 : 0;
 
     const double* table;
     switch (type) {

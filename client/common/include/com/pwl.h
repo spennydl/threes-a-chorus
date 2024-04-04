@@ -10,7 +10,7 @@ typedef struct
 #define PWL_ADSR_PLUCK_FUNCTION                                                \
     {                                                                          \
         .ptsX = { 0.0, 0.1, 0.15, 0.65, 1.0 },                                 \
-        .ptsY = { 0.0, 0.75, 0.55, 0.55, 0.0 }, .pts = 5                       \
+        .ptsY = { 0.0, 0.65, 0.55, 0.55, 0.0 }, .pts = 5                       \
     }
 
 #define PWL_ADSR_AHH_FUNCTION                                                  \

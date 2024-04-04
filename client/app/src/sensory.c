@@ -312,7 +312,7 @@ _sampleLightLevel(void)
     // TODO: Ambient levels will make this a problem. Maybe we want to
     // only add values when they are <0.4 or >0.6? or something?
     // This should at least be easily calibrated, possibly in the cfg file.
-    normalized -= 0.5;
+    normalized -= 0.2;
 
     // Take a smoothed average
     float last = _state.sensorInputs[LIGHT_LEVEL];

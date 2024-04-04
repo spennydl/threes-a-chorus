@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 /** Number of samples in the tables. */
-#define WT_N_SAMPLES 256
+#define WT_N_SAMPLES 255
 
 /** Types of waves available. */
 typedef enum
