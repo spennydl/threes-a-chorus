@@ -15,6 +15,7 @@
 #include "com/pwl.h"
 #include "das/envelope.h"
 #include "das/wavetable.h"
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -91,8 +92,11 @@ typedef enum
     A6,
     Bb6,
     B6,
-    NOTE_NONE
-} Note;
+} NoteOffset;
+
+#define NOTE_NONE INT_MIN
+
+typedef int Note;
 
 /** Operators available. Adding more is as simple as adding more values here. */
 typedef enum
@@ -166,7 +170,7 @@ static const FmSynthParams FM_DEFAULT_PARAMS = {
     .opParams = { { .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
                     .outputStrength = 1.0,
-                    .algorithmConnections = { 0.0, 4.0, 0.0, 0.0 } },
+                    .algorithmConnections = { 0.0, 0.0, 0.0, 0.0 } },
                   {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 4.0,
@@ -332,24 +336,24 @@ static const FmSynthParams FM_BASS_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 1.0,
-                    .outputStrength = 0.8,
+                    .CmRatio = 1.0 / 2,
+                    .outputStrength = 0.6,
                     .algorithmConnections = { 0.0, 0.0, 0.0, 4.0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 4.0,
-                    .outputStrength = 0.4,
+                    .CmRatio = 2.0,
+                    .outputStrength = 0.3,
                     .algorithmConnections = { 0.0, 0.0, 3.4, 0.0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 1,
+                    .CmRatio = 1.0 / 2,
                     .algorithmConnections = { 0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 4.0,
+                    .CmRatio = 2.0,
                     .algorithmConnections = { 0, 0, 0.8, 0 },
                   } },
     .opEnvelopes = { { .gatePoint = 0.65,
@@ -548,17 +552,17 @@ static const FmSynthParams FM_CHIRP_PARAMS = {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 2.0,
                     .outputStrength = 0.2,
-                    .algorithmConnections = { 0.0, 3.6, 0, 0.0 },
+                    .algorithmConnections = { 0.0, 1.8, 0, 0.0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 5.0,
+                    .CmRatio = 4.0,
                     .outputStrength = 0.4,
                     .algorithmConnections = { 0.0, 0.0, 0.0, 0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 5.0,
+                    .CmRatio = 4.0,
                     .outputStrength = 0.15,
                     .algorithmConnections = { 1.8, 0, 0, 0 },
                   },
@@ -579,7 +583,7 @@ static const FmSynthParams FM_CHIRP_PARAMS = {
                        .repeatPoint = -1,
                        .lengthMs = 800,
                        .fn = PWL_PEAKFALL_FUNCTION },
-                     { .gatePoint = 1.0,
+                     { .gatePoint = 0.9,
                        .repeatPoint = -1,
                        .lengthMs = 600,
                        .fn = PWL_CONST_FUNCTION } }

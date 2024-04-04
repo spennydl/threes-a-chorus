@@ -26,8 +26,10 @@ typedef size_t SequencerIdx;
 typedef size_t SequencerBpm;
 typedef int SequencerBpmDelta;
 
+typedef void (*loopCallbackFn)(void);
+
 int
-Sequencer_initialize(SequencerBpm bpm);
+Sequencer_initialize(SequencerBpm bpm, loopCallbackFn callback);
 
 SequencerIdx
 Sequencer_getSlotIndex(int quarter, int eighth, int sixteenth);
@@ -40,6 +42,9 @@ Sequencer_fillSlot(SequencerIdx idx,
 
 void
 Sequencer_start(void);
+
+void
+Sequencer_clear(void);
 
 void
 Sequencer_stop(void);

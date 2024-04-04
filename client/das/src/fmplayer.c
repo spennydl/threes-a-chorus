@@ -48,7 +48,7 @@ static int
 _writeToPcmBuffer(snd_pcm_t* pcm, int16_t* buffer, size_t nSamples)
 {
     long written = 0;
-    size_t offset = 0;
+    long offset = 0;
     int remain = nSamples;
     while (remain > 0) {
         written = snd_pcm_writei(pcm, buffer + offset, remain);
@@ -107,12 +107,13 @@ _play(void* arg)
                 _fmPlayer->ctrl == NOTE_CTRL_NOTE_OFF) {
                 Fm_noteOff(_fmPlayer->synth);
             }
+
             _fmPlayer->ctrl = NOTE_CTRL_NONE;
         }
 
         // wait for a period to become available.
         // This blocks until the next period is ready to write.
-        status = snd_pcm_wait(_fmPlayer->pcmHandle, 1000);
+        status = snd_pcm_wait(_fmPlayer->pcmHandle, 200);
         if (status < 0) {
             // Try to recover the stream!
             if ((status = snd_pcm_recover(_fmPlayer->pcmHandle, status, 0)) <
@@ -123,10 +124,14 @@ _play(void* arg)
                 // TODO: we need a way to shut down from here.
                 return NULL;
             }
+        } else if (status == 0) {
+            // time out on wait. Loop again to update params.
+            printf("we timed out\n");
+            continue;
         }
 
-        // we have a period ready to be written, and the previous one is being
-        // sent to the speakers. Now is the time we generate samples,
+        // we have a period ready to be written, and the previous one is
+        // being sent to the speakers. Now is the time we generate samples,
         Fm_generateSamples(
           _fmPlayer->synth, _fmPlayer->sampleBuffer, _fmPlayer->periodSize);
 
@@ -134,6 +139,7 @@ _play(void* arg)
         if ((status = _writeToPcmBuffer(_fmPlayer->pcmHandle,
                                         _fmPlayer->sampleBuffer,
                                         _fmPlayer->periodSize)) < 0) {
+            fprintf(stderr, "recovering from error %s\n", snd_strerror(status));
             if ((status = snd_pcm_recover(_fmPlayer->pcmHandle, status, 0)) <
                 0) {
                 fprintf(stderr,
@@ -205,7 +211,8 @@ _setHwparams(snd_pcm_t* handle, snd_pcm_hw_params_t* params)
         return -EINVAL;
     }
 
-    /* Configure the buffer size. We want the buffer to be 2 periods long. */
+    /* Configure the buffer size. We want the buffer to be 2 periods long.
+     */
     unsigned int buftime = ALSA_BUFFERTIME;
     int dir = 0;
     err =
@@ -226,11 +233,11 @@ _setHwparams(snd_pcm_t* handle, snd_pcm_hw_params_t* params)
     }
 
     /* Alsa divides its buffers into "periods", and does stuff when playback
-     * reaches the period boundaries like sending data to the ADC (I think?) and
-     * waking up applications waiting for buffers to become ready.
-     * To keep latency low low low, we wanna use 2 periods. Alsa can then do
-     * whatever it's gotta with the data in one period while we're writing to
-     * the other. */
+     * reaches the period boundaries like sending data to the ADC (I think?)
+     * and waking up applications waiting for buffers to become ready. To
+     * keep latency low low low, we wanna use 2 periods. Alsa can then do
+     * whatever it's gotta with the data in one period while we're writing
+     * to the other. */
     snd_pcm_uframes_t period = _fmPlayer->bufferSize / 2;
     dir = 0;
     printf("Trying to set period size to %lu\n", period);
@@ -286,7 +293,8 @@ _setSwparams(snd_pcm_t* handle, snd_pcm_sw_params_t* swparams)
                snd_strerror(err));
         return err;
     }
-    /* allow the transfer when at least period_size samples can be processed */
+    /* allow the transfer when at least period_size samples can be processed
+     */
     /* or disable this mechanism when period event is enabled (aka interrupt
      * like style processing) */
     err = snd_pcm_sw_params_set_period_event(handle, swparams, 1);
@@ -369,8 +377,8 @@ FmPlayer_setSynthVoice(const FmSynthParams* newVoice)
     pthread_rwlock_wrlock(&_fmPlayer->updateRwLock);
     memcpy(&_fmPlayer->params, newVoice, sizeof(FmSynthParams));
 
-    // Set update voice bit and clear operator update bits as those updates are
-    // now invalid
+    // Set update voice bit and clear operator update bits as those updates
+    // are now invalid
     _fmPlayer->updatesNeeded = UPDATE_VOICE_BIT;
 
     pthread_rwlock_unlock(&_fmPlayer->updateRwLock);
@@ -464,7 +472,7 @@ FmPlayer_initialize(const FmSynthParams* params)
 
     _fmPlayer->running = 1;
     // Buffer a single period at a time
-    _fmPlayer->sampleBuffer = malloc(_fmPlayer->bufferSize * sizeof(int16_t));
+    _fmPlayer->sampleBuffer = malloc(_fmPlayer->periodSize * sizeof(int16_t));
 
     pthread_rwlock_init(&_fmPlayer->updateRwLock, NULL);
     pthread_create(&_fmPlayer->playerThread, NULL, _play, NULL);

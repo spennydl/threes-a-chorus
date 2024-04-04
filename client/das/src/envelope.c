@@ -8,6 +8,7 @@
  */
 #include "das/envelope.h"
 #include "com/pwl.h"
+#include <stdbool.h>
 
 #define ENV_TRIGGER_BIT (0x1)
 #define ENV_GATE_BIT (0x2)
@@ -28,14 +29,21 @@ Env_getValueAndAdvance(Env_Envelope* env)
     float value = 0;
     if (env->state & ENV_TRIGGER_BIT) {
         float x = env->current;
+        float min = env->min;
+
         value = Pwl_sample(&env->fn, x);
+        if (value < min) {
+            value = min;
+        } else {
+            min = -1;
+        }
 
         x += env->step;
 
         if (x >= env->gatePoint) {
             if (env->repeatPoint >= 0) {
                 x = env->repeatPoint;
-            } else if (!(env->state & ENV_GATE_BIT)) {
+            } else if ((env->state & ENV_GATE_BIT) == 0) {
                 x = env->gatePoint;
             }
         }
@@ -46,6 +54,7 @@ Env_getValueAndAdvance(Env_Envelope* env)
         }
 
         env->current = x;
+        env->min = min;
     }
     return value;
 }
@@ -53,6 +62,9 @@ Env_getValueAndAdvance(Env_Envelope* env)
 void
 Env_trigger(Env_Envelope* env)
 {
+    if (Env_isTriggered(env)) {
+        env->min = Pwl_sample(&env->fn, env->current);
+    }
     env->current = 0;
     env->state = ENV_TRIGGER_BIT;
 }
@@ -61,4 +73,15 @@ void
 Env_gate(Env_Envelope* env)
 {
     env->state |= ENV_GATE_BIT;
+}
+
+bool
+Env_isTriggered(const Env_Envelope* env)
+{
+    return (env->state & ENV_TRIGGER_BIT) == ENV_TRIGGER_BIT;
+}
+bool
+Env_isGated(const Env_Envelope* env)
+{
+    return (env->state & ENV_GATE_BIT) == ENV_GATE_BIT;
 }

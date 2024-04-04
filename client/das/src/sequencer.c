@@ -29,6 +29,7 @@ struct sequencer
     SequencerOp sequence[SEQUENCER_SLOTS];
     SequencerIdx playbackPosition;
     SequencerBpm bpm;
+    loopCallbackFn loopCallback;
     unsigned long long nsBetweenUpdates;
 };
 
@@ -44,7 +45,7 @@ static void*
 _sequencer(void*);
 
 int
-Sequencer_initialize(SequencerBpm bpm)
+Sequencer_initialize(SequencerBpm bpm, loopCallbackFn callback)
 {
     seq = malloc(sizeof(struct sequencer));
     if (!seq) {
@@ -59,6 +60,7 @@ Sequencer_initialize(SequencerBpm bpm)
 
     seq->bpm = bpm;
     seq->nsBetweenUpdates = BPM_TO_NS(bpm);
+    seq->loopCallback = callback;
 
     // TODO: error
     pthread_create(&_sequencerThread, NULL, _sequencer, NULL);
@@ -126,6 +128,9 @@ _sequencer(void* _data)
 
                 if (currentPos + 1 >= SEQUENCER_SLOTS) {
                     seq->playbackPosition = 0;
+                    if (seq->loopCallback) {
+                        seq->loopCallback();
+                    }
                 } else {
                     seq->playbackPosition = currentPos + 1;
                 }
@@ -177,6 +182,16 @@ void
 Sequencer_stop(void)
 {
     _sequencerState = SEQ_STOP;
+}
+
+void
+Sequencer_clear(void)
+{
+    for (int i = 0; i < SEQUENCER_SLOTS; i++) {
+        seq->sequence[i].note = NOTE_NONE;
+        seq->sequence[i].op = NOTE_CTRL_NONE;
+        seq->sequence[i].synthParams = NULL;
+    }
 }
 
 void
