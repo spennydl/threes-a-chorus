@@ -53,10 +53,10 @@ Tcp_initializeTcpClient(const char* hostname)
     serverlen = sizeof(serverAddress);
 
     // If we need to set a timeout in the future
-    /*struct timeval tv;
-    tv.tv_sec = 10;
+    struct timeval tv;
+    tv.tv_sec = 5;
     tv.tv_usec = 0;
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));*/
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
 
     if (connect(sockfd, (struct sockaddr*)&serverAddress, serverlen) != 0) {
         error("Error connecting to TCP server!\n");
