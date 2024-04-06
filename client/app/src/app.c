@@ -1,12 +1,15 @@
 #include <poll.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
-#include "hal/rfid.h"
 #include "com/timeutils.h"
 #include "das/fmplayer.h"
+#include "das/melodygen.h"
+#include "hal/rfid.h"
 #include "netMidiPlayer.h"
+#include "singer.h"
+
 #include <poll.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -15,7 +18,8 @@
 
 static bool isRunning = false;
 static int currentTagId = 0xFF;
-static struct pollfd stdinp = { .fd = STDIN_FILENO, .events = POLLIN | POLLPRI };
+static struct pollfd stdinp = { .fd = STDIN_FILENO,
+                                .events = POLLIN | POLLPRI };
 
 static void
 pollForMidiNote()
@@ -48,51 +52,63 @@ runMidiPlayer(int channel, char* ip)
     return true;
 }
 
-void App_runApp(char* serverIp)
+void
+App_runApp(char* serverIp)
 {
     isRunning = true;
     bool midiPlayerIsRunning = false;
     bool onRfid = false;
 
-    while(isRunning) {
-
-        // TODO: Get sensor data here and adjust params
-
+    while (isRunning) {
         currentTagId = Rfid_getCurrentTagId();
         onRfid = currentTagId != 0xFF;
 
-        if(onRfid) {
+        if (onRfid) {
             // If midi player is running poll for note
-            if(midiPlayerIsRunning) {
+            if (midiPlayerIsRunning) {
                 pollForMidiNote();
             }
             // If not running yet, start midi player
             else {
-                // TODO: Shut down melody generation here to prepare for midi player?
-                printf("Found tag. Id is %d -> %d\n", currentTagId, currentTagId % 16);
-                midiPlayerIsRunning = runMidiPlayer(currentTagId % 16, serverIp); 
+                // TODO: Shut down melody generation here to prepare for midi
+                // player?
+                printf("Found tag. Id is %d -> %d\n",
+                       currentTagId,
+                       currentTagId % 16);
+                midiPlayerIsRunning =
+                  runMidiPlayer(currentTagId % 16, serverIp);
             }
-        }
-        else {
+        } else {
             // If not on tag but player is running, shut down
-            if(midiPlayerIsRunning) {
+            if (midiPlayerIsRunning) {
                 NetMidi_stop();
                 midiPlayerIsRunning = false;
             }
             // If not on tag and player not running, do melody generation
             else {
-                // TODO: This is where we put the melody generation stuff
+                // TODO @ Spencer: This is how I personally envisioned tying in
+                // the mood. Emotion would affect Major/Minor key, while
+                // magnitude would affect all the other params. I am ill
+                // equipped to write the generateParams function, though.
+
+                // mood = a struct that contains (1) emotion, (2) magnitude
+                // Mood* mood = Singer_getMood();
+
+                // MelodyGenParams params = Melody_generateParams(mood);
+                // Melody_generateToSequencer(params);
             }
         }
     }
 }
 
-void App_shutdownApp()
+void
+App_shutdownApp()
 {
     isRunning = false;
 }
 
-bool App_isRunning()
+bool
+App_isRunning()
 {
     return isRunning;
 }
