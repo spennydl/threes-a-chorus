@@ -6,9 +6,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include "das/sequencer.h"
 #include "das/fmplayer.h"
 #include "hal/rfid.h"
 #include "app.h"
+
+#include "melodyGenExample.h"
 
 int
 main(int argc, char** argv)
@@ -19,11 +22,15 @@ main(int argc, char** argv)
     }
 
     Rfid_init();
+
+    Sequencer_initialize(220, App_onSequencerLoop);
     FmPlayer_initialize(&FM_DEFAULT_PARAMS);
+    srand(time(NULL));
 
     // Does not create a new thread
     App_runApp(argv[1]);
 
+    Sequencer_destroy();
     FmPlayer_close();
     Rfid_shutdown();
 

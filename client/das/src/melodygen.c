@@ -239,6 +239,12 @@ _generateToSequencer(const MelodyGenParams* params)
 }
 
 void
+Melody_generateToSequencer(const MelodyGenParams* params)
+{
+    _generateToSequencer(params);
+}
+
+void
 Melody_playMelody(const Mood* mood)
 {
     MelodyGenParams params;
@@ -274,4 +280,5 @@ Melody_playMelody(const Mood* mood)
 
     // Pass the final params to the melody generating function
     _generateToSequencer(&params);
+    Sequencer_start();
 }
