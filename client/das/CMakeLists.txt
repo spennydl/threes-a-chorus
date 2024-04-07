@@ -8,5 +8,6 @@ file(GLOB MY_SOURCES "src/*.c")
 add_library(das STATIC ${MY_SOURCES})
 
 target_include_directories(das PUBLIC include
-                                      "${CMAKE_SOURCE_DIR}/common/include")
+                                      "${CMAKE_SOURCE_DIR}/common/include"
+                                      "${CMAKE_SOURCE_DIR}/app/include") # for Mood
 target_link_libraries(das m)

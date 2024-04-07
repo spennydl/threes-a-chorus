@@ -86,16 +86,11 @@ App_runApp(char* serverIp)
             }
             // If not on tag and player not running, do melody generation
             else {
-                // TODO @ Spencer: This is how I personally envisioned tying in
-                // the mood. Emotion would affect Major/Minor key, while
-                // magnitude would affect all the other params. I am ill
-                // equipped to write the generateParams function, though.
-
-                // mood = a struct that contains (1) emotion, (2) magnitude
-                // Mood* mood = Singer_getMood();
-
-                // MelodyGenParams params = Melody_generateParams(mood);
-                // Melody_generateToSequencer(params);
+                Mood* mood = Singer_getMood();
+                Melody_playMelody(
+                  mood); // TODO: Do we have to make it so that a generated
+                         // melody finishes playing before we call the function
+                         // to play another melody? If so, how?
             }
         }
     }

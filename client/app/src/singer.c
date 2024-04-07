@@ -132,12 +132,8 @@ _updateMood(Sensory_State* state)
             break;
     }
 
-    // TODO: Not sure about what to set the magnitude to. Should NEUTRAL have
-    // differing intensities, or is NEUTRAL just a flat thing?
     if (withinHyperbola) {
         mood.emotion = EMOTION_NEUTRAL;
-        mood.magnitude = 0.1;
-        return;
     }
 
     // With that, we have finished determining the emotion. Now, the magnitude.
