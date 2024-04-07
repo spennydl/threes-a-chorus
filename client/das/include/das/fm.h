@@ -207,21 +207,21 @@ static const FmSynthParams FM_PIANO_PARAMS = {
     .opParams = { { .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
                     .outputStrength = 0.5,
-                    .algorithmConnections = { 0, 2 * 853, 162, 2 * 211 } },
+                    .algorithmConnections = { 0, 853, 220, 220 } },
                   {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
                     .outputStrength = 0.0,
-                    .algorithmConnections = { 0.0, 0.0, 0.0, 0.0 },
+                    .algorithmConnections = { 0.0, 0.0, 0.0, 200.0 },
                   },
                   { .waveType = WAVETYPE_SINE,
                     .CmRatio = 2.5,
-                    .outputStrength = 0.1,
+                    .outputStrength = 0.3,
                     .algorithmConnections = { 0.0, 880.0, 0.0, 0.0 } },
                   { .waveType = WAVETYPE_SINE,
                     .CmRatio = 4,
                     .outputStrength = 0.0,
-                    .algorithmConnections = { 0, 253, 0, 0 } } },
+                    .algorithmConnections = { 0, 0, 0, 0 } } },
     .opEnvelopes = { { .gatePoint = 0.65,
                        .repeatPoint = -1,
                        .lengthMs = 1000,
@@ -240,6 +240,50 @@ static const FmSynthParams FM_PIANO_PARAMS = {
                        .fn = PWL_ADSR_AHH_FUNCTION }
 
     }
+};
+
+static const FmSynthParams FM_SAWBLADE_PARAMS = {
+    .sampleRate = 44100,
+    .opParams = { {
+                    .waveType = WAVETYPE_SAW,
+                    .CmRatio = 2.50,
+                    .outputStrength = 0.2,
+                    .algorithmConnections = { 0.0, 69, 0.0, 0.0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SAW,
+                    .CmRatio = 0.25,
+                    .outputStrength = 0.1,
+                    .algorithmConnections = { 0, 0, 420, 0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 0.5,
+                    .outputStrength = 0.3,
+                    .algorithmConnections = { 0, 0, 0, 0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SAW,
+                    .CmRatio = 3.5,
+                    .outputStrength = 0.3,
+                    .algorithmConnections = { 0, 0, 1760, 0 },
+                  } },
+    .opEnvelopes = { { .gatePoint = 0.5,
+                       .repeatPoint = -1,
+                       .lengthMs = 1000,
+                       .fn = PWL_ADSR_HAMMER_FUNCTION },
+                     { .gatePoint = 0.5,
+                       .repeatPoint = -1,
+                       .lengthMs = 1000,
+                       .fn = PWL_ADSR_AHH_FUNCTION },
+                     { .gatePoint = 0.5,
+                       .repeatPoint = -1,
+                       .lengthMs = 1300,
+                       .fn = PWL_SWELL_FUNCTION },
+                     { .gatePoint = 0.5,
+                       .repeatPoint = -1,
+                       .lengthMs = 1200,
+                       .fn = PWL_ADSR_HAMMER_FUNCTION } }
 };
 
 static const FmSynthParams FM_BELL_PARAMS = {
@@ -284,11 +328,11 @@ static const FmSynthParams FM_BELL_PARAMS = {
                        .fn = PWL_BELLSTRIKE_FUNCTION } }
 };
 
-static const FmSynthParams FM_CHIME_PARAMS = {
+static const FmSynthParams FM_CRY_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 1.0 / 5,
+                    .CmRatio = 1,
                     .fixToNote = E2,
                     .outputStrength = 1.0,
                     .algorithmConnections = { 0.0, 300, 0.0, 0.0 },
@@ -443,7 +487,7 @@ static const FmSynthParams FM_BRASS_PARAMS = {
                   {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 4.0,
-                    .outputStrength = 0.4,
+                    .outputStrength = 0.2,
                     .fixToNote = NOTE_NONE,
                     .algorithmConnections = { 0, (8 * 233.1), 0, 0 },
                   } },
@@ -458,11 +502,11 @@ static const FmSynthParams FM_BRASS_PARAMS = {
                      { .gatePoint = 0.5,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = PWL_ADSR_PLUCK_FUNCTION },
+                       .fn = PWL_ADSR_AHH_FUNCTION },
                      { .gatePoint = 0.9,
                        .repeatPoint = -1,
                        .lengthMs = 800,
-                       .fn = PWL_ADSR_PLUCK_FUNCTION } }
+                       .fn = PWL_ADSR_AHH_FUNCTION } }
 };
 
 static const FmSynthParams FM_YOI_PARAMS = {
@@ -471,13 +515,13 @@ static const FmSynthParams FM_YOI_PARAMS = {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
                     .outputStrength = 0.51,
-                    .algorithmConnections = { 0.0, 18.0, 0.0, 0.0 },
+                    .algorithmConnections = { 0.0, 4097.0, 0.0, 490.0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
                     .outputStrength = 0.68,
-                    .algorithmConnections = { 0.0, 0.0, 2.8, 0.0 },
+                    .algorithmConnections = { 0.0, 0.0, 1287, 0.0 },
                   },
                   {
                     .waveType = WAVETYPE_SQUARE,
@@ -485,8 +529,8 @@ static const FmSynthParams FM_YOI_PARAMS = {
                     .algorithmConnections = { 0 },
                   },
                   {
-                    .waveType = WAVETYPE_SINE,
-                    .CmRatio = 4.0,
+                    .waveType = WAVETYPE_SAW,
+                    .CmRatio = 8.0 / 5,
                     .algorithmConnections = { 0 },
                   } },
     .opEnvelopes = { { .gatePoint = 0.65,
@@ -513,18 +557,18 @@ static const FmSynthParams FM_BIG_PARAMS = {
                     .waveType = WAVETYPE_SQUARE,
                     .CmRatio = 1.0,
                     .outputStrength = 0.8,
-                    .algorithmConnections = { 0.0, 0.0, 0.0, 3.8 },
+                    .algorithmConnections = { 0.0, 0.0, 0.0, 380 },
                   },
                   {
                     .waveType = WAVETYPE_SQUARE,
                     .CmRatio = 1.0 / 20.0,
-                    .outputStrength = 0.5,
-                    .algorithmConnections = { 0.0, 0.0, 4.5, 3 },
+                    .outputStrength = 0.3,
+                    .algorithmConnections = { 0.0, 0.0, 450, 30 },
                   },
                   {
                     .waveType = WAVETYPE_SQUARE,
                     .CmRatio = 1,
-                    .algorithmConnections = { 0, 0, 1.4, 0.0 },
+                    .algorithmConnections = { 0, 0, 140, 0.0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
@@ -551,13 +595,56 @@ static const FmSynthParams FM_BIG_PARAMS = {
     }
 };
 
+static const FmSynthParams FM_GLITCHBOOP_PARAMS = {
+    .sampleRate = 44100,
+    .opParams = { {
+                    .waveType = WAVETYPE_SQUARE,
+                    .CmRatio = 1.0,
+                    .outputStrength = 0.7,
+                    .algorithmConnections = { 0.0, 1250, 0, 304 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SINE,
+                    .CmRatio = 1.0 / 100.0,
+                    .algorithmConnections = { 0.0, 0.0, 0, 0 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SAW,
+                    .CmRatio = 1.0 / 9,
+                    .outputStrength = 0.15,
+                    .algorithmConnections = { 0, 0, 0, 24 },
+                  },
+                  {
+                    .waveType = WAVETYPE_SAW,
+                    .CmRatio = 1.0 / 27,
+                    .algorithmConnections = { 0, 0, 0, 0 },
+                  } },
+    .opEnvelopes = { { .gatePoint = 0.65,
+                       .repeatPoint = -1,
+                       .lengthMs = 1500,
+                       .fn = PWL_ADSR_PLUCK_FUNCTION },
+                     { .gatePoint = 1.0,
+                       .repeatPoint = 0,
+                       .lengthMs = 2345,
+                       .fn = PWL_SWELL_FUNCTION },
+                     { .gatePoint = 0.8,
+                       .repeatPoint = 0.2,
+                       .lengthMs = 1000,
+                       .fn = PWL_SWELL_FUNCTION },
+                     { .gatePoint = 0.9,
+                       .repeatPoint = 0.1,
+                       .lengthMs = 3200,
+                       .fn = PWL_SWELL_FUNCTION } }
+
+};
+
 static const FmSynthParams FM_BEEPBOOP_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
-                    .outputStrength = 0.8,
-                    .algorithmConnections = { 0.0, 25, 0, 30.4 },
+                    .outputStrength = 0.7,
+                    .algorithmConnections = { 0.0, 250, 0, 304 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
@@ -568,7 +655,7 @@ static const FmSynthParams FM_BEEPBOOP_PARAMS = {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0 / 9,
                     .outputStrength = 0.15,
-                    .algorithmConnections = { 0, 0, 0, 2.4 },
+                    .algorithmConnections = { 0, 0, 0, 24 },
                   },
                   {
                     .waveType = WAVETYPE_SQUARE,
@@ -600,7 +687,7 @@ static const FmSynthParams FM_SHINYDRONE_PARAMS = {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 3.0,
                     .outputStrength = 0.5,
-                    .algorithmConnections = { 0.0, 2, 0, 0 },
+                    .algorithmConnections = { 0.0, 2000, 0, 0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
@@ -611,12 +698,12 @@ static const FmSynthParams FM_SHINYDRONE_PARAMS = {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 6.0,
                     .outputStrength = 0.5,
-                    .algorithmConnections = { 0, 0, 0, 2 },
+                    .algorithmConnections = { 0, 0, 0, 2000 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
                     .CmRatio = 2.5,
-                    .algorithmConnections = { 0, 0, 0, 2 },
+                    .algorithmConnections = { 0, 0, 0, 2000 },
                   } },
     .opEnvelopes = { { .gatePoint = 0.8,
                        .repeatPoint = 0.2,
@@ -641,34 +728,34 @@ static const FmSynthParams FM_CHIRP_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 2.0,
+                    .CmRatio = 1.0,
                     .outputStrength = 0.2,
-                    .algorithmConnections = { 0.0, 1.8, 0, 0.0 },
+                    .algorithmConnections = { 0.0, 1760, 0, 0.0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 4.0,
+                    .CmRatio = 1.0,
                     .outputStrength = 0.4,
                     .algorithmConnections = { 0.0, 0.0, 0.0, 0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 4.0,
+                    .CmRatio = 3,
                     .outputStrength = 0.15,
-                    .algorithmConnections = { 1.8, 0, 0, 0 },
+                    .algorithmConnections = { 380, 0, 0, 0 },
                   },
                   {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 3.5,
+                    .CmRatio = 6.0,
                     .algorithmConnections = { 0, 0, 0, 0 },
                   } },
     .opEnvelopes = { { .gatePoint = 0.2,
                        .repeatPoint = -1,
-                       .lengthMs = 800,
+                       .lengthMs = 1000,
                        .fn = PWL_PEAKFALL_FUNCTION },
                      { .gatePoint = 0.3,
                        .repeatPoint = -1,
-                       .lengthMs = 230,
+                       .lengthMs = 830,
                        .fn = PWL_EXP_FALLOFF_FUNCTION },
                      { .gatePoint = 0.2,
                        .repeatPoint = -1,
