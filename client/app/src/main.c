@@ -26,6 +26,9 @@ main(int argc, char** argv)
     Sequencer_initialize(220, App_onSequencerLoop);
     FmPlayer_initialize(&FM_DEFAULT_PARAMS);
     srand(time(NULL));
+    
+    // TODO: Uncomment once sensors are hooked up
+    //Singer_run();
 
     // Does not create a new thread
     App_runApp(argv[1]);
