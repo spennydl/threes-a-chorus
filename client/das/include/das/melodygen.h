@@ -124,7 +124,7 @@ static const Chord minorProgressions[][4] = { { vi, ii, Va6, vi },
 
 // faster tempo, jumpy melody, major key
 static const MelodyGenParams happyParams = { .tempo = TEMPO_FAST,
-                                             .key = KEY_MINOR,
+                                             .key = KEY_MAJOR,
                                              .jumpChance = 0.7,
                                              .noteDensity = 0.7,
                                              .upDownTendency = 0.6,

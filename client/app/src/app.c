@@ -63,7 +63,7 @@ void
 App_runApp(char* serverIp)
 {
     (void)debugMood;
-    
+
     isRunning = true;
     bool midiPlayerIsRunning = false;
     bool onRfid = false;
@@ -107,7 +107,7 @@ void
 App_onSequencerLoop()
 {
     Sequencer_clear();
-    printf("New sequencer loop\n");
+    //printf("New sequencer loop\n");
     Mood* mood = Singer_getMood();
     Melody_playMelody(mood);
 }
