@@ -1,6 +1,7 @@
 #pragma once
 
 #include "das/fm.h"
+#include "singer.h"
 
 /** A fast bpm. */
 #define TEMPO_FAST 180
@@ -116,8 +117,54 @@ static const Chord minorProgressions[][4] = { { vi, ii, Va6, vi },
                                               { vi6, I7, IV7, Va6 },
                                               { ii, IV42, Va6, vi } };
 
+/** Params that serve as a baseline for a mood, and can be altered further by
+ * multiplying mood magnitude. */
+
+// TODO: Adjust these params to fit your vision. I did this roughly.
+
+// faster tempo, jumpy melody, major key
+static const MelodyGenParams happyParams = { .tempo = TEMPO_FAST,
+                                             .key = KEY_MINOR,
+                                             .jumpChance = 0.7,
+                                             .noteDensity = 0.7,
+                                             .upDownTendency = 0.6,
+                                             .stoccatoLegatoTendency = 0.7 };
+
+// slower tempo, longer notes
+static const MelodyGenParams sadParams = { .tempo = TEMPO_SLOW,
+                                           .key = KEY_MINOR,
+                                           .jumpChance = 0.2,
+                                           .noteDensity = 0.3,
+                                           .upDownTendency = 0.4,
+                                           .stoccatoLegatoTendency = 0.1 };
+
+// medium tempo, ascending melody
+static const MelodyGenParams angryParams = { .tempo = TEMPO_MEDIUM,
+                                             .key = KEY_MINOR,
+                                             .jumpChance = 0.3,
+                                             .noteDensity = 1.0,
+                                             .upDownTendency = 1.0,
+                                             .stoccatoLegatoTendency = 0.5 };
+
+// glitchy, random, amelodic sounds
+static const MelodyGenParams overstimulatedParams = { .tempo = TEMPO_FAST,
+                                                      .key = KEY_MINOR,
+                                                      .jumpChance = 0.9,
+                                                      .noteDensity = 0.1,
+                                                      .upDownTendency = 0.5,
+                                                      .stoccatoLegatoTendency =
+                                                        0.5 };
+
+// sparse drone/boops
+static const MelodyGenParams neutralParams = { .tempo = TEMPO_MEDIUM,
+                                               .key = KEY_MAJOR,
+                                               .jumpChance = 0.5,
+                                               .noteDensity = 0.3,
+                                               .upDownTendency = 0.5,
+                                               .stoccatoLegatoTendency = 0.5 };
+
 /**
- * Generates a melody to the sequencer according to the given params.
+ * Generates a melody according to the mood.
  */
 void
-Melody_generateToSequencer(const MelodyGenParams* params);
+Melody_playMelody(const Mood* mood);

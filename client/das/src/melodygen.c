@@ -164,8 +164,8 @@ _getPassingTone(const Note from, const int direction)
     return from + _noteSignedRingDistance(stripped, majorScale[noteIdx]);
 }
 
-void
-Melody_generateToSequencer(const MelodyGenParams* params)
+static void
+_generateToSequencer(const MelodyGenParams* params)
 {
     Sequencer_setBpm(params->tempo);
 
@@ -236,4 +236,42 @@ Melody_generateToSequencer(const MelodyGenParams* params)
         }
         _lastNotePlayed = currentNote;
     }
+}
+
+void
+Melody_playMelody(const Mood* mood)
+{
+    MelodyGenParams params;
+
+    // Retrieve the baseline params for any mood. These are defined in
+    // melodygen.h.
+    switch (mood->emotion) {
+        case EMOTION_HAPPY:
+            params = happyParams;
+            break;
+        case EMOTION_SAD:
+            params = sadParams;
+            break;
+        case EMOTION_ANGRY:
+            params = angryParams;
+            break;
+        case EMOTION_OVERSTIMULATED:
+            params = overstimulatedParams;
+            break;
+        case EMOTION_NEUTRAL:
+            params = neutralParams;
+            break;
+        default:
+            params = neutralParams;
+            break;
+    }
+
+    // Factor in the mood magnitude [0.0 - 1.0]
+    params.jumpChance *= mood->magnitude;
+    params.noteDensity *= mood->magnitude;
+    params.upDownTendency *= mood->magnitude;
+    params.stoccatoLegatoTendency *= mood->magnitude;
+
+    // Pass the final params to the melody generating function
+    _generateToSequencer(&params);
 }
