@@ -10,13 +10,19 @@ typedef struct
 #define PWL_ADSR_PLUCK_FUNCTION                                                \
     {                                                                          \
         .ptsX = { 0.0, 0.1, 0.15, 0.65, 1.0 },                                 \
-        .ptsY = { 0.0, 0.65, 0.55, 0.55, 0.0 }, .pts = 5                       \
+        .ptsY = { 0.0, 1.0, 0.6, 0.6, 0.0 }, .pts = 5                          \
     }
 
 #define PWL_ADSR_AHH_FUNCTION                                                  \
     {                                                                          \
         .ptsX = { 0.0, 0.25, 0.35, 0.75, 1.0 },                                \
-        .ptsY = { 0.0, 0.6, 0.55, 0.55, 0.0 }, .pts = 5                        \
+        .ptsY = { 0.0, 0.8, 0.55, 0.55, 0.0 }, .pts = 5                        \
+    }
+
+#define PWL_ADSR_HAMMER_FUNCTION                                               \
+    {                                                                          \
+        .ptsX = { 0.0, 0.05, 0.1, 0.75, 1.0 },                                 \
+        .ptsY = { 0.0, 1.0, 0.35, 0.2, 0.0 }, .pts = 5                         \
     }
 
 #define PWL_SWELL_FUNCTION                                                     \
@@ -30,7 +36,7 @@ typedef struct
                                                             0.201896517994655, \
                                                             0.040762203978366, \
                                                             0.008229747049020, \
-                                                            0.001661557273174, \
+                                                            0.0,               \
                                                             0.0 },             \
         .pts = 6                                                               \
     }
@@ -63,7 +69,7 @@ typedef struct
 
 #define PWL_BELLSTRIKE_FUNCTION                                                \
     {                                                                          \
-        .ptsX = { 0.0, 0.25, 0.75, 1.0 }, .ptsY = { 0.6, 0.35, 0.35, 0.0 },    \
+        .ptsX = { 0.0, 0.25, 0.75, 1.0 }, .ptsY = { 0.8, 0.35, 0.35, 0.0 },    \
         .pts = 4                                                               \
     }
 

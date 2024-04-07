@@ -35,6 +35,8 @@ typedef struct
     float opModBy[FM_OPERATORS * FM_OPERATORS];
     /** Operator output strength. */
     float opOutput[FM_OPERATORS];
+
+    float opFreq[FM_OPERATORS];
     /** Operator wave type. */
     WaveType opWave[FM_OPERATORS];
 
@@ -99,6 +101,7 @@ _updateOperatorFreq(_FmSynth* synth, FmOperator op)
     if (synth->opCM[op] > 0) {
         float opFreq = synth->baseFreq * synth->opCM[op];
         synth->opStep[op] = _calcStep(opFreq, synth->sampleRate);
+        synth->opFreq[op] = opFreq;
     }
 }
 
@@ -200,6 +203,7 @@ _setOperatorCM(_FmSynth* synth, FmOperator op, float ratio, Note fixTo)
     } else {
         float freq = C2_HZ * powf(TWELVETH_ROOT_OF_TWO, fixTo);
         synth->opStep[op] = _calcStep(freq, synth->sampleRate);
+        synth->opFreq[op] = freq;
     }
 }
 
@@ -324,8 +328,10 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
             int idx = op * FM_OPERATORS;
             opMod[op] = 0;
             for (int modOp = 0; modOp < FM_OPERATORS; modOp++) {
-                opMod[op] += synth->opModBy[idx + modOp] *
-                             (opSamples[modOp] * synth->opStep[modOp]); // ??
+                float modIdx =
+                  synth->opModBy[idx + modOp] / synth->opFreq[modOp];
+                opMod[op] +=
+                  modIdx * (opSamples[modOp] * synth->opStep[modOp]); // ??
             }
 
             synth->opAngle[op] += synth->opStep[op] + opMod[op];
