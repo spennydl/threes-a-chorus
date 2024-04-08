@@ -1,7 +1,5 @@
 #include "singer.h"
-#include "com/timeutils.h"
 #include "sensory.h"
-#include "shutdown.h"
 
 #define MAX_REPORT_SIZE 1024
 
@@ -10,17 +8,12 @@
 #define HYPERBOLA_I(x) (1.0 / x)
 #define HYPERBOLA_II(x) (-1.0 / x)
 
-static int run = 1;
 static char report[MAX_REPORT_SIZE];
 
 static Mood mood = {
     .emotion = EMOTION_NEUTRAL,
     .magnitude = 0.0,
 };
-
-/** Shutdown handler. */
-static void
-_shutdown_handler(int status);
 
 /** Prints the current sensory state. */
 static void
@@ -31,19 +24,12 @@ static void
 _updateMood(Sensory_State* state);
 
 static void
-_shutdown_handler(int status)
-{
-    (void)status;
-    run = 0;
-}
-
-static void
 _printSensoryReport(Sensory_State* state)
 {
     snprintf(report,
              MAX_REPORT_SIZE,
              "accel[%s] :: pot[%s] :: dist[%s] :: light[%s] :: button[%s] -->> "
-             "Index[%6.2f %6.2f]\n",
+             "Index[%6.2f %6.2f]",
              Sensory_inputLevelToStr(state->accelState),
              Sensory_inputLevelToStr(state->potInteractionState),
              Sensory_inputLevelToStr(state->proximityState),
@@ -52,6 +38,7 @@ _printSensoryReport(Sensory_State* state)
              state->sensoryIndex,
              state->sensoryTolerance);
 
+    printf("%s", "\033[K\r");
     printf("%s", report);
 }
 
@@ -145,8 +132,7 @@ _updateMood(Sensory_State* state)
 
     if (y > 500) {
         y = 500;
-    }
-    else if (y < -500) {
+    } else if (y < -500) {
         y = -500;
     }
 
@@ -158,14 +144,14 @@ _updateMood(Sensory_State* state)
     mood.magnitude = (sqrt(powf(x, 2) + powf(y, 2))) / sqrt(2);
 }
 
-static void
-_singerShutdown(void)
+void
+Singer_shutdown(void)
 {
     Sensory_close();
 }
 
 int
-Singer_intialize(void)
+Singer_initialize(void)
 {
     // TODO: This will come from configuration
     Sensory_Preferences prefs = { .cAccelLow = 10,
@@ -179,39 +165,22 @@ Singer_intialize(void)
         return -1;
     }
 
-    if (shutdown_install(_shutdown_handler) < 0) {
-        Sensory_close();
-        fprintf(stderr, "Failed to start shutdown listener\n");
-        return -1;
-    }
+    Sensory_beginSensing();
 
     return 0;
 }
 
 int
-Singer_run(void)
+Singer_update(void)
 {
-    Sensory_beginSensing();
-
-    const long long MS_TO_WAIT_BETWEEN_UPDATES = 1000;
-
     Sensory_State sensorState;
     Sensory_State* state = &sensorState;
-    while (run) {
-        long long start = Timeutils_getTimeInMs();
 
-        Sensory_reportSensoryState(state);
+    Sensory_reportSensoryState(state);
 
-        _updateMood(state);
+    _updateMood(state);
 
-        _printSensoryReport(state);
-
-        long long elapsed = Timeutils_getTimeInMs() - start;
-        long long toSleep = MS_TO_WAIT_BETWEEN_UPDATES - elapsed;
-        Timeutils_sleepForMs(toSleep);
-    }
-
-    _singerShutdown();
+    _printSensoryReport(state);
 
     return 0;
 }
