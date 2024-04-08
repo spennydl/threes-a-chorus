@@ -158,8 +158,8 @@ Singer_initialize(void)
                                   .cAccelHigh = -4,
                                   .cPot = -4,
                                   .cDistance = -2,
-                                  .cLight = 3,
-                                  .cButton = -5 };
+                                  .cLight = 0,
+                                  .cButton = 5 };
     if (Sensory_initialize(&prefs) < 0) {
         fprintf(stderr, "Failed to initialize sensory system\n");
         return -1;
