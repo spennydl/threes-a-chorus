@@ -63,12 +63,17 @@ App_runApp(char* serverIp)
         currentTagId = Rfid_getCurrentTagId();
         onRfid = currentTagId != 0xFF;
 
-        if (onRfid && !midiPlayerIsRunning) {
-            // If not running yet, start midi player
-            Sequencer_stop();
-            printf(
-              "Found tag. Id is %d -> %d\n", currentTagId, currentTagId % 16);
-            midiPlayerIsRunning = runMidiPlayer(currentTagId % 16, serverIp);
+        if (onRfid) {
+            if (!midiPlayerIsRunning) {
+                // If not running yet, start midi player
+                Sequencer_stop();
+                printf("Found tag. Id is %d -> %d\n",
+                       currentTagId,
+                       currentTagId % 16);
+                midiPlayerIsRunning =
+                  runMidiPlayer(currentTagId % 16, serverIp);
+            }
+            // otherwise let the midi player play
         } else {
             // If not on tag but player is running, shut down
             if (midiPlayerIsRunning) {
