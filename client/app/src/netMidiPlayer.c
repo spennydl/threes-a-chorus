@@ -74,16 +74,16 @@ static void setInstrumentFromMidiCode(int instrumentCode) {
         FmPlayer_setSynthVoice(&FM_SHINYDRONE_PARAMS);
     } else if(instrumentCode <= 104) {
         // Synth FX
-        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_BEEPBOOP_PARAMS); // TODO
     } else if(instrumentCode <= 112) {
         // "Ethnic"
-        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_YOI_PARAMS); // TODO
     } else if(instrumentCode <= 120) {
         // Percussive
-        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_BASS_PARAMS); // TODO
     } else if(instrumentCode <= 128) {
         // Sound FX
-        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_BEEPBOOP_PARAMS); // TODO
     } else {
         printf("Could not turn %d into an instrument!\n", instrumentCode);
     }

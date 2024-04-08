@@ -140,10 +140,22 @@ _updateMood(Sensory_State* state)
 
     // (2) The mood magnitude is calculated as the distance from the origin.
 
-    // TODO: Would be nice to normalize this to [0.0, 1.0] to match
-    // the melodyParams, but not sure how because I don't know the min/max
-    // possible values.
-    mood.magnitude = sqrt(powf(x, 2) + powf(y, 2));
+    // Normalize y between [-500, 500] for magnitude calculation
+    // x is already normalized
+
+    if (y > 500) {
+        y = 500;
+    }
+    else if (y < -500) {
+        y = -500;
+    }
+
+    y /= 500;
+
+    // The max value of this is sqrt(2) because sqrt(1 + 1) so we can
+    // divide by that to normalize this too
+
+    mood.magnitude = (sqrt(powf(x, 2) + powf(y, 2))) / sqrt(2);
 }
 
 static void

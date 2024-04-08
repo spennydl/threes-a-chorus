@@ -79,7 +79,19 @@ onMessageRecieved(void* instance, const char* newMessage, int socketFd)
 
     printf("Registering new socket to send to for channel %d\n", channel);
 
-    // Bad channel
+    // Bad channel - first try to join any channel with no listeners for diversity reasons
+    if(channelHeads[channel] == NULL) {
+      for(int i = 0; i < 16; i++) {
+        // I know the long && is weird but it avoids another for loop
+        if(channelHeads[i] != NULL && (listeners[i][0] == -1 && listeners[i][1] == -1 && listeners[i][2] == -1)) {
+          printf("Tried to join invalid channel %d. Had to fallback to %d\n", channel, i);
+          channel = i;
+          break;
+        }
+      }
+    }
+
+    // Bad channel - now just try to join the first available channel
     if(channelHeads[channel] == NULL) {
       for(int i = 0; i < 16; i++) {
         if(channelHeads[i] != NULL) {
