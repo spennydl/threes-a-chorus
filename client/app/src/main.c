@@ -11,6 +11,7 @@
 #include "das/sequencer.h"
 #include "hal/rfid.h"
 #include "singer.h"
+#include "hal/segDisplay.h"
 
 int
 main(int argc, char** argv)
@@ -26,10 +27,12 @@ main(int argc, char** argv)
     FmPlayer_initialize(&FM_DEFAULT_PARAMS);
     srand(time(NULL));
     Singer_initialize();
+    SegDisplay_init();
 
     // Does not create a new thread
     App_runApp(argv[1]);
 
+    SegDisplay_shutdown();
     Singer_shutdown();
     Sequencer_destroy();
     FmPlayer_close();
