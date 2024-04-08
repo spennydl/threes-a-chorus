@@ -2,16 +2,14 @@
 // Has main(); does initialization and cleanup and perhaps some basic logic.
 
 #include <poll.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 
 #include "das/sequencer.h"
 #include "das/fmplayer.h"
 #include "hal/rfid.h"
 #include "app.h"
-
-#include "melodyGenExample.h"
 
 int
 main(int argc, char** argv)
