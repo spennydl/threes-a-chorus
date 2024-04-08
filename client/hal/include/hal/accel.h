@@ -19,6 +19,7 @@
 #include <string.h>
 #include <sys/wait.h>
 
+#include "com/config.h"
 #include "com/fileio.h"
 
 #define ACCEL_MAX_READING 2047
