@@ -10,10 +10,11 @@
 #define BLINK_THRESHOLD 200
 
 // Admin vars
-static I2C_BusHandle i2c;
+static atomic_bool _isSinging = false;
 static Mood* mood;
-static pthread_t _segDisplayThread;
 
+static I2C_BusHandle i2c;
+static pthread_t _segDisplayThread;
 static bool init = false;
 
 //////////////////////// Function Prototypes /////////////////////////////
@@ -101,8 +102,15 @@ _display(void* args)
     (void)args;
 
     while (true) {
-        mood = Singer_getMood();
-        SegDisplay_displayEmotion(mood->emotion);
+        // Singing is a unique emotion, in that it is not derived from sensory
+        // params. The singing emotion has display priority above all
+        // other emotions if the BBG is currently on RFID (i.e. it's singing).
+        if (_isSinging) {
+            SegDisplay_displayEmotion(EMOTION_SINGING);
+        } else {
+            mood = Singer_getMood();
+            SegDisplay_displayEmotion(mood->emotion);
+        }
     }
 
     return NULL;
@@ -162,10 +170,17 @@ SegDisplay_shutdown(void)
 {
     assert(init);
 
+    pthread_join(_segDisplayThread, NULL);
     I2C_closeBus(&i2c);
     SegDisplay_turnOffDigits();
 
     init = false;
+}
+
+void
+SegDisplay_setIsSinging(bool isSinging)
+{
+    _isSinging = isSinging;
 }
 
 void
