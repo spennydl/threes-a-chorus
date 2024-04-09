@@ -72,6 +72,7 @@ App_runApp(char* serverIp)
                        currentTagId % 16);
                 midiPlayerIsRunning =
                   runMidiPlayer(currentTagId % 16, serverIp);
+                SegDisplay_setIsSinging(true);
             }
             // otherwise let the midi player play
         } else {
@@ -80,6 +81,7 @@ App_runApp(char* serverIp)
                 NetMidi_stop();
                 midiPlayerIsRunning = false;
                 Sequencer_start();
+                SegDisplay_setIsSinging(false);
             }
             Singer_update();
         }

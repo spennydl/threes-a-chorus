@@ -44,6 +44,10 @@ Singer_initialize(void);
 int
 Singer_update(void);
 
+/** Set whether the segDisplay should be displaying the SINGING mood or not. */
+void
+SegDisplay_setIsSinging(bool isSinging);
+
 /** Return a pointer to the current Mood struct of the singer. */
 Mood*
 Singer_getMood(void);
