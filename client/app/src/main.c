@@ -10,8 +10,8 @@
 #include "das/fmplayer.h"
 #include "das/sequencer.h"
 #include "hal/rfid.h"
-#include "singer.h"
 #include "hal/segDisplay.h"
+#include "singer.h"
 
 int
 main(int argc, char** argv)

@@ -247,38 +247,49 @@ Melody_generateToSequencer(const MelodyGenParams* params)
 void
 Melody_playMelody(const Mood* mood)
 {
-    MelodyGenParams params;
+    FmSynthParams voiceParams;
+    MelodyGenParams melodyParams;
 
-    // Retrieve the baseline params for any mood. These are defined in
-    // melodygen.h.
+    // Retrieve the params for an emotion. Each emotion is associated with both
+    // a voice (the timbre) and a melody (the notes to be played).
+    // Voice params defined in fm.h and config.h
+    // Melody params defined in melodygen.h
     switch (mood->emotion) {
         case EMOTION_HAPPY:
-            params = happyParams;
+            voiceParams = VOICE_HAPPY;
+            melodyParams = happyParams;
             break;
         case EMOTION_SAD:
-            params = sadParams;
+            voiceParams = VOICE_SAD;
+            melodyParams = sadParams;
             break;
         case EMOTION_ANGRY:
-            params = angryParams;
+            voiceParams = VOICE_ANGRY;
+            melodyParams = angryParams;
             break;
         case EMOTION_OVERSTIMULATED:
-            params = overstimulatedParams;
+            voiceParams = VOICE_OVERSTIMULATED;
+            melodyParams = overstimulatedParams;
             break;
         case EMOTION_NEUTRAL:
-            params = neutralParams;
+            voiceParams = VOICE_NEUTRAL;
+            melodyParams = neutralParams;
             break;
         default:
-            params = neutralParams;
+            voiceParams = VOICE_NEUTRAL;
+            melodyParams = neutralParams;
             break;
     }
 
-    // Factor in the mood magnitude [0.0 - 1.0]
-    params.jumpChance *= mood->magnitude;
-    params.noteDensity *= mood->magnitude;
-    params.upDownTendency *= mood->magnitude;
-    params.stoccatoLegatoTendency *= mood->magnitude;
+    // For melody params, factor in the mood magnitude [0.0 - 1.0]
+    melodyParams.jumpChance *= mood->magnitude;
+    melodyParams.noteDensity *= mood->magnitude;
+    melodyParams.upDownTendency *= mood->magnitude;
+    melodyParams.stoccatoLegatoTendency *= mood->magnitude;
 
-    // Pass the final params to the melody generating function
-    _generateToSequencer(&params);
+    // Pass the final params to the respective functions
+    FmPlayer_setSynthVoice(&voiceParams);
+    _generateToSequencer(&melodyParams);
+
     Sequencer_start();
 }
