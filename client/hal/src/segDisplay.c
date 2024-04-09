@@ -239,8 +239,6 @@ SegDisplay_displayEmotion(Emotion emotion)
     // while loop; the mood can change on a dime, and this approach allows that.
     bool blinking = Utils_getRandomIntBtwn(0, BLINK_THRESHOLD);
     if (blinking == 0) {
-        printf("Blink at: %lld\n", Timeutils_getTimeInMs());
-
         // Blinks should last longer than the standard ~15ms, should they happen
         // to occur. We randomize from 50 - 300ms.
         int blinkDuration = Utils_getRandomIntBtwn(50, 300);

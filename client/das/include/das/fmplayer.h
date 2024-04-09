@@ -14,7 +14,10 @@
 
 #pragma once
 
+#include "com/config.h"
 #include "das/fm.h"
+
+#include "singer.h"
 
 typedef enum
 {
