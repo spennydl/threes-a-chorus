@@ -1,9 +1,11 @@
-#include "singer.h"
+#include "com/config.h"
+
 #include "sensory.h"
+#include "singer.h"
 
 #define MAX_REPORT_SIZE 1024
 
-// If we want the NEUTRAL mood to occur more generously, we can increase the
+// If we want the IDLE mood to occur more generously, we can increase the
 // numerator to give the hyperbolae a greater area.
 #define HYPERBOLA_I(x) (1.0 / x)
 #define HYPERBOLA_II(x) (-1.0 / x)
@@ -11,7 +13,7 @@
 static char report[MAX_REPORT_SIZE];
 
 static Mood mood = {
-    .emotion = EMOTION_NEUTRAL,
+    .emotion = EMOTION_IDLE,
     .magnitude = 0.0,
 };
 
@@ -75,7 +77,7 @@ _updateMood(Sensory_State* state)
     }
 
     // After we determine the quadrant, we need to know if the sensory input is
-    // high enough to evoke an emotion, or if the singer should remain NEUTRAL.
+    // high enough to evoke an emotion, or if the singer should remain IDLE.
 
     // Graphically, this means the point falls within the area formed by four
     // asymptotes surrounding the origin point. We represent this "star twinkle"
@@ -120,7 +122,7 @@ _updateMood(Sensory_State* state)
     }
 
     if (withinHyperbola) {
-        mood.emotion = EMOTION_NEUTRAL;
+        mood.emotion = EMOTION_IDLE;
     }
 
     // With that, we have finished determining the emotion. Now, the magnitude.
@@ -153,14 +155,7 @@ Singer_shutdown(void)
 int
 Singer_initialize(void)
 {
-    // TODO: This will come from configuration
-    Sensory_Preferences prefs = { .cAccelLow = 10,
-                                  .cAccelHigh = -4,
-                                  .cPot = -4,
-                                  .cDistance = -2,
-                                  .cLight = 0,
-                                  .cButton = 5 };
-    if (Sensory_initialize(&prefs) < 0) {
+    if (Sensory_initialize(&sensoryPreferences) < 0) {
         fprintf(stderr, "Failed to initialize sensory system\n");
         return -1;
     }

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "sensory.h"
+
+#include <stdint.h>
+
 /* ******************************************
  * Uncomment the following for Zen Cape RED *
  * ****************************************** */
@@ -11,12 +15,14 @@
 #define ACCEL_DATA_READ 0x28 + 0x80
 #define ACCEL_NUM_BYTES_TO_READ 6
 #define ACCEL_INDEX_ADJUST 0
+
 //////////////// segDisplay.c  /////////////////////
 #define SEGDISPLAY_I2C_ADDRESS 0x20
 #define SEGDISPLAY_DIRA_REG 0x02
 #define SEGDISPLAY_DIRB_REG 0x03
 #define SEGDISPLAY_OUTA_REG 0x00
 #define SEGDISPLAY_OUTB_REG 0x01
+
 static const uint8_t EYES_HAPPY[4] = { 0x83, 0x48, 0x83, 0x48 };
 static const uint8_t EYES_SAD[4] = { 0x06, 0x10, 0x10, 0x18 };
 static const uint8_t EYES_ANGRY[4] = { 0x10, 0x02, 0x04, 0x02 };
@@ -62,9 +68,20 @@ static const uint8_t BLINK_SINGING[4] = { 0x81, 0x50, 0x81, 0x50 };
 // static const uint8_t BLINK_OVERSTIMULATED[4] = { 0x08, 0x10, 0x08, 0x10 };
 // static const uint8_t BLINK_NEUTRAL[4] = { 0x84, 0x20, 0x06, 0x20 };
 // static const uint8_t BLINK_SINGING[4] = { 0x04, 0xA1, 0x04, 0xA1 };
-//
+
 /* ********************************************
  *   Define your board's personality here...  *
  * ********************************************/
 
-// ...
+// Pick one of the three emotions to display when idle.
+// #define EMOTION_IDLE EMOTION_HAPPY
+// #define EMOTION_IDLE EMOTION_NEUTRAL
+#define EMOTION_IDLE EMOTION_SAD
+
+// Set your sensory preferences.
+static const Sensory_Preferences sensoryPreferences = { .cAccelLow = 10,
+                                                        .cAccelHigh = -4,
+                                                        .cPot = -4,
+                                                        .cDistance = -2,
+                                                        .cLight = 0,
+                                                        .cButton = 5 };
