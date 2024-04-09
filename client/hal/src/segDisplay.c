@@ -170,6 +170,7 @@ SegDisplay_shutdown(void)
 {
     assert(init);
 
+    pthread_join(_segDisplayThread, NULL);
     I2C_closeBus(&i2c);
     SegDisplay_turnOffDigits();
 
