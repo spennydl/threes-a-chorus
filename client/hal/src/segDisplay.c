@@ -10,7 +10,7 @@
 #define BLINK_THRESHOLD 200
 
 // Admin vars
-static bool _isSinging = false;
+static atomic_bool _isSinging = false;
 static Mood* mood;
 
 static I2C_BusHandle i2c;
