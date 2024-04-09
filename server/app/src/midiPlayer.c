@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <dirent.h>
 
 #include "hal/timeutils.h"
 #include "midiPlayer.h"
@@ -291,6 +292,25 @@ void
 MidiPlayer_setBpm(int newBpm)
 {
   bpm = newBpm;
+}
+
+void
+MidiPlayer_getRandomMidiPath(char* buffer)
+{
+  int numberOfMidis = 0;
+  char* midiFileNames[128] = {0};
+
+  DIR* d = opendir("midis");
+  struct dirent* dir;
+
+  while((dir = readdir(d)) != NULL) {
+    if(dir->d_type != DT_DIR) {
+      midiFileNames[numberOfMidis++] = dir->d_name;
+    }
+  }
+
+  int index = (rand() % numberOfMidis);
+  snprintf(buffer, 256, "midis/%s", midiFileNames[index]);
 }
 
 void*

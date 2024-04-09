@@ -28,5 +28,11 @@ MidiPlayer_playMidiFile(char* path);
 void
 MidiPlayer_setBpm(int newBpm);
 
+/**
+ * Read the name of a random midi file in midis folder into buffer
+*/
+void
+MidiPlayer_getRandomMidiPath(char* buffer);
+
 void*
 midiPlayerWorker(void* p);
