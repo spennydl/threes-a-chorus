@@ -1,52 +1,28 @@
 #include <poll.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 
+#include "app.h"
 #include "com/timeutils.h"
-#include "das/fmplayer.h"
 #include "das/melodygen.h"
+#include "das/sequencer.h"
 #include "hal/rfid.h"
 #include "netMidiPlayer.h"
+#include "shutdown.h"
 #include "singer.h"
-#include "app.h"
-#include "das/sequencer.h"
 
 #include <poll.h>
 #include <stdio.h>
 #include <unistd.h>
 
 #define POLL_TAG_ID_MS 100
+// 10ms
+#define NS_TO_WAIT_BETWEEN_UPDATES 10000000
 
 static bool isRunning = false;
 static int currentTagId = 0xFF;
-static struct pollfd stdinp = { .fd = STDIN_FILENO,
-                                .events = POLLIN | POLLPRI };
 
-static Mood debugMood = {
-.emotion = EMOTION_HAPPY,
-.magnitude = 1.0
-};
-
-static void
-pollForMidiNote()
-{
-    int poll_status;
-    if ((poll_status = poll(&stdinp, 1, 500)) < 0) {
-        // I'm not sure this is likely to happen. If it does we'll
-        // simply continue.
-        perror("SHUTDOWN: ERR: Polling stdin failed");
-        return;
-    }
-    if (poll_status > 0) {
-        if ((stdinp.revents & (POLLIN | POLLPRI)) > 0) {
-            // Read the line sent from stdin, otherwise it will get sent
-            // to the shell after we exit.
-            char buf[128];
-            fgets(buf, 128, stdin);
-        }
-    }
-}
+static Mood debugMood = { .emotion = EMOTION_HAPPY, .magnitude = 1.0 };
 
 static bool
 runMidiPlayer(int channel, char* ip)
@@ -59,10 +35,21 @@ runMidiPlayer(int channel, char* ip)
     return true;
 }
 
+static void
+_shutdown_handler(int code)
+{
+    (void)code;
+    isRunning = false;
+}
+
 void
 App_runApp(char* serverIp)
 {
     (void)debugMood;
+
+    if (shutdown_install(_shutdown_handler) < 0) {
+        fprintf(stderr, "WARN: Failed to start shutdown listener\n");
+    }
 
     isRunning = true;
     bool midiPlayerIsRunning = false;
@@ -71,35 +58,36 @@ App_runApp(char* serverIp)
     App_onSequencerLoop();
 
     while (isRunning) {
+        long long start = Timeutils_getTimeInNs();
+
         currentTagId = Rfid_getCurrentTagId();
         onRfid = currentTagId != 0xFF;
 
         if (onRfid) {
-            // If midi player is running poll for note
-            if (midiPlayerIsRunning) {
-                pollForMidiNote();
-            }
-            // If not running yet, start midi player
-            else {
+            if (!midiPlayerIsRunning) {
+                // If not running yet, start midi player
                 Sequencer_stop();
                 printf("Found tag. Id is %d -> %d\n",
                        currentTagId,
                        currentTagId % 16);
                 midiPlayerIsRunning =
                   runMidiPlayer(currentTagId % 16, serverIp);
+                SegDisplay_setIsSinging(true);
             }
+            // otherwise let the midi player play
         } else {
             // If not on tag but player is running, shut down
             if (midiPlayerIsRunning) {
                 NetMidi_stop();
                 midiPlayerIsRunning = false;
                 Sequencer_start();
+                SegDisplay_setIsSinging(false);
             }
-            // If not on tag and player not running, do melody generation
-            else {
-                // This is handled in the callback function App_onSequencerLoop
-            }
+            Singer_update();
         }
+        long long elapsed = Timeutils_getTimeInNs() - start;
+        long long toSleep = NS_TO_WAIT_BETWEEN_UPDATES - elapsed;
+        Timeutils_sleepForNs(toSleep);
     }
 }
 
@@ -107,7 +95,7 @@ void
 App_onSequencerLoop()
 {
     Sequencer_clear();
-    //printf("New sequencer loop\n");
+    // printf("New sequencer loop\n");
     Mood* mood = Singer_getMood();
     Melody_playMelody(mood);
 }

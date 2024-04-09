@@ -1,26 +1,21 @@
-#include "singer.h"
-#include "com/timeutils.h"
+#include "com/config.h"
+
 #include "sensory.h"
-#include "shutdown.h"
+#include "singer.h"
 
 #define MAX_REPORT_SIZE 1024
 
-// If we want the NEUTRAL mood to occur more generously, we can increase the
+// If we want the IDLE mood to occur more generously, we can increase the
 // numerator to give the hyperbolae a greater area.
 #define HYPERBOLA_I(x) (1.0 / x)
 #define HYPERBOLA_II(x) (-1.0 / x)
 
-static int run = 1;
 static char report[MAX_REPORT_SIZE];
 
 static Mood mood = {
-    .emotion = EMOTION_NEUTRAL,
+    .emotion = EMOTION_IDLE,
     .magnitude = 0.0,
 };
-
-/** Shutdown handler. */
-static void
-_shutdown_handler(int status);
 
 /** Prints the current sensory state. */
 static void
@@ -31,19 +26,12 @@ static void
 _updateMood(Sensory_State* state);
 
 static void
-_shutdown_handler(int status)
-{
-    (void)status;
-    run = 0;
-}
-
-static void
 _printSensoryReport(Sensory_State* state)
 {
     snprintf(report,
              MAX_REPORT_SIZE,
              "accel[%s] :: pot[%s] :: dist[%s] :: light[%s] :: button[%s] -->> "
-             "Index[%6.2f %6.2f]\n",
+             "Index[%6.2f %6.2f]",
              Sensory_inputLevelToStr(state->accelState),
              Sensory_inputLevelToStr(state->potInteractionState),
              Sensory_inputLevelToStr(state->proximityState),
@@ -52,6 +40,7 @@ _printSensoryReport(Sensory_State* state)
              state->sensoryIndex,
              state->sensoryTolerance);
 
+    printf("%s", "\033[K\r");
     printf("%s", report);
 }
 
@@ -88,7 +77,7 @@ _updateMood(Sensory_State* state)
     }
 
     // After we determine the quadrant, we need to know if the sensory input is
-    // high enough to evoke an emotion, or if the singer should remain NEUTRAL.
+    // high enough to evoke an emotion, or if the singer should remain IDLE.
 
     // Graphically, this means the point falls within the area formed by four
     // asymptotes surrounding the origin point. We represent this "star twinkle"
@@ -133,7 +122,7 @@ _updateMood(Sensory_State* state)
     }
 
     if (withinHyperbola) {
-        mood.emotion = EMOTION_NEUTRAL;
+        mood.emotion = EMOTION_IDLE;
     }
 
     // With that, we have finished determining the emotion. Now, the magnitude.
@@ -145,8 +134,7 @@ _updateMood(Sensory_State* state)
 
     if (y > 500) {
         y = 500;
-    }
-    else if (y < -500) {
+    } else if (y < -500) {
         y = -500;
     }
 
@@ -158,60 +146,36 @@ _updateMood(Sensory_State* state)
     mood.magnitude = (sqrt(powf(x, 2) + powf(y, 2))) / sqrt(2);
 }
 
-static void
-_singerShutdown(void)
+void
+Singer_shutdown(void)
 {
     Sensory_close();
 }
 
 int
-Singer_intialize(void)
+Singer_initialize(void)
 {
-    // TODO: This will come from configuration
-    Sensory_Preferences prefs = { .cAccelLow = 10,
-                                  .cAccelHigh = -4,
-                                  .cPot = -4,
-                                  .cDistance = -2,
-                                  .cLight = 3,
-                                  .cButton = -5 };
-    if (Sensory_initialize(&prefs) < 0) {
+    if (Sensory_initialize(&sensoryPreferences) < 0) {
         fprintf(stderr, "Failed to initialize sensory system\n");
         return -1;
     }
 
-    if (shutdown_install(_shutdown_handler) < 0) {
-        Sensory_close();
-        fprintf(stderr, "Failed to start shutdown listener\n");
-        return -1;
-    }
+    Sensory_beginSensing();
 
     return 0;
 }
 
 int
-Singer_run(void)
+Singer_update(void)
 {
-    Sensory_beginSensing();
-
-    const long long MS_TO_WAIT_BETWEEN_UPDATES = 1000;
-
     Sensory_State sensorState;
     Sensory_State* state = &sensorState;
-    while (run) {
-        long long start = Timeutils_getTimeInMs();
 
-        Sensory_reportSensoryState(state);
+    Sensory_reportSensoryState(state);
 
-        _updateMood(state);
+    _updateMood(state);
 
-        _printSensoryReport(state);
-
-        long long elapsed = Timeutils_getTimeInMs() - start;
-        long long toSleep = MS_TO_WAIT_BETWEEN_UPDATES - elapsed;
-        Timeutils_sleepForMs(toSleep);
-    }
-
-    _singerShutdown();
+    _printSensoryReport(state);
 
     return 0;
 }

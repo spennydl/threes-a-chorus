@@ -138,29 +138,12 @@ clearAllEventNodes()
     }
 }
 
-static void makeLinkedListLoop(struct MidiEventNode* currentMidiHead)
-{
-    if(currentMidiHead == NULL) {
-      //perror("Midi head is null when trying to make loop\n");
-      return;
-    }
-    else {
-      printf("Making channel %d loop because it is valid\n", currentMidiHead->channel);
-    }
-
-    struct MidiEventNode* current = currentMidiHead;
-    while(current->next != NULL) {
-      current = current->next;
-    }
-    current->next = currentMidiHead;
-}
-
-static void parse_and_dump(struct midi_parser *parser, long long* trackLengths)
+static void parse_and_dump(struct midi_parser *parser)
 {
   clearAllEventNodes();
   struct MidiEventNode* prev[16] = {0};
   enum midi_parser_status status;
-
+  int channel = -1;
   while (1) {
     status = midi_parse(parser);
     switch (status) {
@@ -183,11 +166,9 @@ static void parse_and_dump(struct midi_parser *parser, long long* trackLengths)
 
       case MIDI_PARSER_TRACK_MIDI:
 
-        // Keep track of longest track for adding a buffer at the end
-        trackLengths[parser->midi.channel] += parser->vtime;
-
+        channel = parser->midi.channel;
         struct MidiEventNode* eventNode = malloc(sizeof(struct MidiEventNode));
-        int channel = parser->midi.channel;
+       
         eventNode->status = parser->midi.status;
         eventNode->vtime = parser->vtime;
         eventNode->currentVTime = parser->vtime;
@@ -255,41 +236,7 @@ parseMidiFile(const char *path)
   parser.size  = st.st_size;
   parser.in    = mem;
 
-  long long trackLengths[16] = {0};
-
-  parse_and_dump(&parser, trackLengths);
-
-  long long longestTrackLength = 0;
-
-  for(int i = 0; i < 16; i++) {
-    longestTrackLength = trackLengths[i] > longestTrackLength ? trackLengths[i] : longestTrackLength;
-  }
-
-  for(int i = 0; i < 16; i++) {
-
-    if(channelHeads[i] == NULL) {
-      continue;
-    }
-
-    long long padding = longestTrackLength - trackLengths[i];
-    struct MidiEventNode* current = channelHeads[i];
-
-    // Create padding node and add to the end of the midi nodes
-    struct MidiEventNode* paddingNode = malloc(sizeof(struct MidiEventNode));
-    paddingNode->status = MIDI_STATUS_NOTE_OFF;
-    paddingNode->vtime = padding;
-    paddingNode->param1 = 1;
-    paddingNode->param2 = 1;
-    paddingNode->next = NULL;
-    paddingNode->channel = i;
-
-    while(current->next != NULL) {
-      current = current->next;
-    }
-
-    current->next = paddingNode;
-  }
-
+  parse_and_dump(&parser);
 
   munmap(mem, st.st_size);
   close(fd);
@@ -334,7 +281,6 @@ MidiPlayer_playMidiFile(char* path)
     }
 
     for(int i = 0; i < 16; i++) {
-      makeLinkedListLoop(channelHeads[i]);
       currentEventNodes[i] = channelHeads[i];
     }
     
@@ -351,6 +297,7 @@ void*
 midiPlayerWorker(void* p)
 {
   (void)p;
+  bool anyTracksPlaying = true;
 
   while(running) {
     if(!readyToPlay) {
@@ -360,15 +307,17 @@ midiPlayerWorker(void* p)
     long long shortestVTime = LLONG_MAX;
 
     for(int i = 0; i < 16; i++) {
-      if(channelHeads[i] != NULL) {
+      if(channelHeads[i] != NULL && currentEventNodes[i] != NULL) {
         shortestVTime = currentEventNodes[i]->currentVTime < shortestVTime ? currentEventNodes[i]->currentVTime : shortestVTime;
       }
     }
 
     Timeutils_sleepForNs(vTimeInNs(shortestVTime));
 
+    anyTracksPlaying = false;
     for(int i = 0; i < 16; i++) {
-      if(channelHeads[i] != NULL) {
+      if(channelHeads[i] != NULL && currentEventNodes[i] != NULL) {
+        anyTracksPlaying = true;
         if(currentEventNodes[i]->currentVTime == shortestVTime) {
           currentEventNodes[i]->currentVTime = currentEventNodes[i]->vtime;
           
@@ -395,6 +344,12 @@ midiPlayerWorker(void* p)
           currentEventNodes[i]->currentVTime -= shortestVTime;
         }
       }
+    }
+
+    if(!anyTracksPlaying) {
+       for(int i = 0; i < 16; i++) {
+          currentEventNodes[i] = channelHeads[i];
+       }
     }
   }
 

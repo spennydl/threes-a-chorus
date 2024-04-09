@@ -38,12 +38,19 @@ typedef struct
 
 /** Initialize the system. */
 int
-Singer_intialize(void);
+Singer_initialize(void);
 
 /** Runs and returns the status code of the execution. */
 int
-Singer_run(void);
+Singer_update(void);
+
+/** Set whether the segDisplay should be displaying the SINGING mood or not. */
+void
+SegDisplay_setIsSinging(bool isSinging);
 
 /** Return a pointer to the current Mood struct of the singer. */
 Mood*
 Singer_getMood(void);
+
+void
+Singer_shutdown();
