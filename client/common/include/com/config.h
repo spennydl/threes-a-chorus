@@ -101,7 +101,7 @@ static const uint8_t BLINK_SINGING[4] = { 0x81, 0x50, 0x81, 0x50 };
 // #define VOICE_NEUTRAL FM_BASS_PARAMS
 // #define VOICE_NEUTRAL FM_BRASS_PARAMS
 // #define VOICE_NEUTRAL FM_DEFAULT_PARAMS
-#define VOICE_NEUTRAL FM_PIANO_PARAMS
+#define VOICE_NEUTRAL FM_SHINYDRONE_PARAMS
 
 /** Set your sensory preference constants. **/
 static const Sensory_Preferences sensoryPreferences = { .cAccelLow = 5,

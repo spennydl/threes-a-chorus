@@ -8,9 +8,8 @@ project(
 
 # Compiler options (inherited by sub-folders)
 set(CMAKE_C_STANDARD 11)
-add_compile_options(-Wall -Werror -Wpedantic -Wextra -pg)
+add_compile_options(-Wall -Werror -Wpedantic -Wextra)
 add_compile_options(-fdiagnostics-color)
-add_link_options(-pg)
 
 # Enable address sanitizer (Comment this out to make your code faster)
 # add_compile_options(-fsanitize=address) add_link_options(-fsanitize=address)

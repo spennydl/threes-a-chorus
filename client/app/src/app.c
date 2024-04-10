@@ -98,6 +98,7 @@ App_runApp(char* serverIp)
 void
 App_onSequencerLoop()
 {
+    Sequencer_stop();
     Sequencer_clear();
     Mood* mood = Singer_getMood();
     Melody_playMelody(mood);

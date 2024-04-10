@@ -206,16 +206,21 @@ _generateToSequencer(const MelodyGenParams* params)
                 continue;
             } else {
                 // furthest up = closest down and vice versa
-                currentNote =
-                  _closestInChord(prog[i], _lastNotePlayed, -direction);
-                if (_lastNotePlayed != NOTE_NONE) {
-                    currentNote += HALF_STEPS_IN_OCTAVE * direction;
+                if (_randomTest(0.75)) {
+                    currentNote =
+                      _closestInChord(prog[i], _lastNotePlayed, -direction);
+                    if (_lastNotePlayed != NOTE_NONE) {
+                        currentNote += HALF_STEPS_IN_OCTAVE * direction;
+                    }
+                    Sequencer_fillSlot(beatIdx, noteCtrl, currentNote, NULL);
                 }
-                Sequencer_fillSlot(beatIdx, noteCtrl, currentNote, NULL);
             }
         } else {
-            currentNote = _closestInChord(prog[i], _lastNotePlayed, direction);
-            Sequencer_fillSlot(beatIdx, noteCtrl, currentNote, NULL);
+            if (dense || _randomTest(0.75)) {
+                currentNote =
+                  _closestInChord(prog[i], _lastNotePlayed, direction);
+                Sequencer_fillSlot(beatIdx, noteCtrl, currentNote, NULL);
+            }
         }
 
         // fill the rest of the 2 beats
@@ -291,5 +296,5 @@ Melody_playMelody(const Mood* mood)
     FmPlayer_setSynthVoice(&voiceParams);
     _generateToSequencer(&melodyParams);
 
-    Sequencer_start();
+    Sequencer_reset();
 }
