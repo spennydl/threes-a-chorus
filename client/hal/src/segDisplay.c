@@ -16,6 +16,7 @@ static Mood* mood;
 static I2C_BusHandle i2c;
 static pthread_t _segDisplayThread;
 static bool init = false;
+static bool run = true;
 
 //////////////////////// Function Prototypes /////////////////////////////
 static void
@@ -101,7 +102,7 @@ _display(void* args)
 {
     (void)args;
 
-    while (true) {
+    while (run) {
         // Singing is a unique emotion, in that it is not derived from sensory
         // params. The singing emotion has display priority above all
         // other emotions if the BBG is currently on RFID (i.e. it's singing).
@@ -170,6 +171,7 @@ SegDisplay_shutdown(void)
 {
     assert(init);
 
+    run = false;
     pthread_join(_segDisplayThread, NULL);
     I2C_closeBus(&i2c);
     SegDisplay_turnOffDigits();
@@ -186,8 +188,8 @@ SegDisplay_setIsSinging(bool isSinging)
 void
 SegDisplay_displayEmotion(Emotion emotion)
 {
-    const uint8_t* eyesPattern;
-    const uint8_t* blinkPattern;
+    const uint8_t* eyesPattern = NULL;
+    const uint8_t* blinkPattern = NULL;
 
     // Set the digit patterns according to the mood.
     switch (emotion) {

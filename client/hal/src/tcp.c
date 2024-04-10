@@ -1,8 +1,8 @@
-#include <stdio.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -86,7 +86,8 @@ ssize_t
 Tcp_sendMessage(char* message)
 {
     char msg[MAX_BUFFER_SIZE] = { 0 };
-    strncpy(msg, message, strlen(message));
+    size_t len = strnlen(message, MAX_BUFFER_SIZE);
+    strncpy(msg, message, len);
     return send(sockfd, msg, MAX_BUFFER_SIZE, 0);
 }
 

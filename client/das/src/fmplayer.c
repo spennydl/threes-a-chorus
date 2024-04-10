@@ -5,6 +5,7 @@
 #include <alsa/pcm.h>
 #include <asm-generic/errno-base.h>
 #include <bits/pthreadtypes.h>
+#include <bits/types/struct_sched_param.h>
 #include <pthread.h>
 #include <stdio.h>
 
@@ -12,7 +13,7 @@
  * the hardware buffer in microseconds. Setting to 0.05 seconds currently gives
  * a period of about 735 samples, which means we will have very low latency
  * (0.05 seconds is great), but will require more CPU time to keep up. */
-#define ALSA_BUFFERTIME 64000
+#define ALSA_BUFFERTIME 200000
 
 #define UPDATE_NEEDED_BIT 0x1
 #define UPDATE_VOICE_BIT (0x1 << FM_OPERATORS)

@@ -5,6 +5,7 @@
  */
 #include "das/fm.h"
 #include "das/envelope.h"
+#include "das/wavetable.h"
 
 #include <malloc.h>
 #include <math.h>

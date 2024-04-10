@@ -37,6 +37,7 @@
 #define POT_UPDATE_RATE 40
 #define BUTTON_UPDATE_RATE 2
 #define INTERACTION_TOLERANCE_UPDATE_RATE 10
+#define ACCELEROMETER_UPDATE_RATE 5
 // This shouldn't update too quickly or else the mood will swing around pretty
 // wildly. 1s feels sorta right.
 #define SENSORY_INDEX_UPDATE_RATE 100
@@ -144,7 +145,7 @@ static struct TristateIntegrator _lightLevelTsInt = {
 /** Determines accelerometer input state. */
 static struct TristateIntegrator _accelTsInt = {
     .stateThresholds = { 0.0, 0.001, CUBE_ROOT_0_25 },
-    .countThresholds = { 20, 20, 10 },
+    .countThresholds = { 10, 10, 5 },
 };
 
 /** Determines distance sensor/proximity state. */
@@ -242,7 +243,7 @@ _countInteractions(void)
 static void
 _integrateTristate(struct TristateIntegrator* ti, float value)
 {
-    int stateIdx;
+    int stateIdx = 0;
     int canTrigger = 1;
     // find which 'bucket' the given values lies in
     for (int i = 0; i < 3; i++) {
@@ -335,7 +336,7 @@ _updatePotReading(void)
     // Get the pot reading and find the difference from the last.
     // This tells us how far we've been swung which correlates to how fast
     // the pot is being turned.
-    float pot = (float)adc_voltage_raw(ADC_CHANNEL0) / ADC_MAX_READING;
+    float pot = (float)adc_voltage_raw(ADC_CHANNEL1) / ADC_MAX_READING;
     float diff = fabsf(pot - last);
     diff = (diff <= 0.01) ? 0 : diff;
 
@@ -448,7 +449,9 @@ _senseWorker(void* _unused)
     while (_sense) {
         long long start = Timeutils_getTimeInNs();
 
-        _updateAccelerometer();
+        if (count % ACCELEROMETER_UPDATE_RATE == 0) {
+            _updateAccelerometer();
+        }
 
         if (count % DIST_SENSOR_UPDATE_RATE == 0) {
             _updateDistanceSensor();
@@ -518,7 +521,7 @@ Sensory_initialize(const Sensory_Preferences* prefs)
         return SENSORY_EULTSON;
     }
 
-    if ((button = Button_open(68, 8, 10)) == NULL) {
+    if ((button = Button_open(60, 9, 12)) == NULL) {
         Ultrasonic_shutdown();
         Accel_close();
         return -4;

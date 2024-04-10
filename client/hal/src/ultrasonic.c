@@ -51,10 +51,6 @@ waitForTriggerExpecting(int expected)
     }
 
     if (echoValue != expected) { // expected. Start of pulse.
-        fprintf(stderr,
-                "WARN: unexpected pulse value - expected %d but got %d\n",
-                expected,
-                echoValue);
         return -1;
     }
     return 1;
