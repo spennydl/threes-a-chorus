@@ -5,6 +5,7 @@
  */
 #include "das/fm.h"
 #include "das/envelope.h"
+#include "das/wavetable.h"
 
 #include <malloc.h>
 #include <math.h>
@@ -146,6 +147,9 @@ _configure(_FmSynth* synth, const FmSynthParams* params, bool initialize)
 
             Env_prepareEnvelope(&synth->opAdsr[op],
                                 synth->sampleRate / ADSR_UPDATES_PER_SEC);
+
+            synth->opAngle[op] = 0;
+            synth->opEnvelope[op] = 0;
         }
     }
 }

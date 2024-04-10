@@ -3,21 +3,15 @@
 #include <stdio.h>
 
 #include "app.h"
-#include "com/timeutils.h"
 #include "das/melodygen.h"
 #include "das/sequencer.h"
 #include "hal/rfid.h"
 #include "netMidiPlayer.h"
-#include "shutdown.h"
 #include "singer.h"
 
 #include <poll.h>
 #include <stdio.h>
 #include <unistd.h>
-
-#define POLL_TAG_ID_MS 100
-// 10ms
-#define NS_TO_WAIT_BETWEEN_UPDATES 10000000
 
 static bool isRunning = false;
 static int currentTagId = 0xFF;
@@ -35,21 +29,15 @@ runMidiPlayer(int channel, char* ip)
     return true;
 }
 
-static void
-_shutdown_handler(int code)
-{
-    (void)code;
-    isRunning = false;
-}
+/** Timeout for the poll() on stdin. */
+#define SHUTDOWN_STDINPOLL_TIMEOUT_MS 100
+/** Buffer size for the buffer used to consume stdin. */
+#define SHUTDOWN_STDINPOLL_BUFSIZ 128
 
 void
 App_runApp(char* serverIp)
 {
     (void)debugMood;
-
-    if (shutdown_install(_shutdown_handler) < 0) {
-        fprintf(stderr, "WARN: Failed to start shutdown listener\n");
-    }
 
     isRunning = true;
     bool midiPlayerIsRunning = false;
@@ -58,7 +46,6 @@ App_runApp(char* serverIp)
     App_onSequencerLoop();
 
     while (isRunning) {
-        long long start = Timeutils_getTimeInNs();
 
         currentTagId = Rfid_getCurrentTagId();
         onRfid = currentTagId != 0xFF;
@@ -85,17 +72,34 @@ App_runApp(char* serverIp)
             }
             Singer_update();
         }
-        long long elapsed = Timeutils_getTimeInNs() - start;
-        long long toSleep = NS_TO_WAIT_BETWEEN_UPDATES - elapsed;
-        Timeutils_sleepForNs(toSleep);
+
+        struct pollfd stdinp = { .fd = STDIN_FILENO,
+                                 .events = POLLIN | POLLPRI };
+        int poll_status;
+        if ((poll_status = poll(&stdinp, 1, SHUTDOWN_STDINPOLL_TIMEOUT_MS)) <
+            0) {
+            // I'm not sure this is likely to happen. If it does we'll simply
+            // continue.
+            perror("SHUTDOWN: ERR: Polling stdin failed");
+        }
+        if (poll_status > 0) {
+            if ((stdinp.revents & (POLLIN | POLLPRI)) > 0) {
+                // Read the line sent from stdin, otherwise it will get sent
+                // to the shell after we exit.
+                char buf[SHUTDOWN_STDINPOLL_BUFSIZ];
+                fgets(buf, SHUTDOWN_STDINPOLL_BUFSIZ, stdin);
+
+                isRunning = false;
+            }
+        }
     }
 }
 
 void
 App_onSequencerLoop()
 {
+    Sequencer_stop();
     Sequencer_clear();
-    // printf("New sequencer loop\n");
     Mood* mood = Singer_getMood();
     Melody_playMelody(mood);
 }

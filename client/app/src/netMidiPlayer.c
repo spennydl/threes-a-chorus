@@ -23,8 +23,8 @@ typedef struct
 static MidiEvent
 _deserializeMidiEvent(const char* message)
 {
-    char buffer[MAX_BUFFER_SIZE] = {0};
-    strncpy(buffer, message, MAX_BUFFER_SIZE - 1);
+    char buffer[MAX_BUFFER_SIZE] = { 0 };
+    strncpy(buffer, message, MAX_BUFFER_SIZE);
 
     MidiEvent event;
     int type = atoi(strtok(buffer, ";"));
@@ -35,53 +35,55 @@ _deserializeMidiEvent(const char* message)
     return event;
 }
 
-static void setInstrumentFromMidiCode(int instrumentCode) {
-    if(instrumentCode <= 8) {
+static void
+setInstrumentFromMidiCode(int instrumentCode)
+{
+    if (instrumentCode <= 8) {
         // Piano
         FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS);
-    } else if(instrumentCode <= 16) {
+    } else if (instrumentCode <= 16) {
         // Chromatic Perc.
         FmPlayer_setSynthVoice(&FM_BELL_PARAMS);
-    } else if(instrumentCode <= 24) {
+    } else if (instrumentCode <= 24) {
         // Organ
         FmPlayer_setSynthVoice(&FM_BIG_PARAMS);
-    } else if(instrumentCode <= 32) {
+    } else if (instrumentCode <= 32) {
         // Guitar
         FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
-    } else if(instrumentCode <= 40) {
+    } else if (instrumentCode <= 40) {
         // Bass
         FmPlayer_setSynthVoice(&FM_BASS_PARAMS);
-    } else if(instrumentCode <= 48) {
+    } else if (instrumentCode <= 48) {
         // Strings
         FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
-    } else if(instrumentCode <= 56) {
+    } else if (instrumentCode <= 56) {
         // Ensemble
         FmPlayer_setSynthVoice(&FM_AHH_PARAMS);
-    } else if(instrumentCode <= 64) {
+    } else if (instrumentCode <= 64) {
         // Brass
         FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
-    } else if(instrumentCode <= 72) {
+    } else if (instrumentCode <= 72) {
         // Reed
         FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
-    } else if(instrumentCode <= 80) {
+    } else if (instrumentCode <= 80) {
         // Pipe
         FmPlayer_setSynthVoice(&FM_CHIRP_PARAMS);
-    } else if(instrumentCode <= 88) {
+    } else if (instrumentCode <= 88) {
         // Synth Lead
         FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
-    } else if(instrumentCode <= 96) {
+    } else if (instrumentCode <= 96) {
         // Synth Pad
         FmPlayer_setSynthVoice(&FM_SHINYDRONE_PARAMS);
-    } else if(instrumentCode <= 104) {
+    } else if (instrumentCode <= 104) {
         // Synth FX
         FmPlayer_setSynthVoice(&FM_BEEPBOOP_PARAMS); // TODO
-    } else if(instrumentCode <= 112) {
+    } else if (instrumentCode <= 112) {
         // "Ethnic"
         FmPlayer_setSynthVoice(&FM_YOI_PARAMS); // TODO
-    } else if(instrumentCode <= 120) {
+    } else if (instrumentCode <= 120) {
         // Percussive
         FmPlayer_setSynthVoice(&FM_BASS_PARAMS); // TODO
-    } else if(instrumentCode <= 128) {
+    } else if (instrumentCode <= 128) {
         // Sound FX
         FmPlayer_setSynthVoice(&FM_BEEPBOOP_PARAMS); // TODO
     } else {
@@ -104,11 +106,11 @@ _playNetMidi(void* _unused)
             continue;
         }
 
-        if(requestBuf[0] == '\0') {
+        if (requestBuf[0] == '\0') {
             continue;
         }
 
-        printf("%s\n",requestBuf);
+        printf("%s\n", requestBuf);
 
         MidiEvent event = _deserializeMidiEvent(requestBuf);
 
@@ -117,7 +119,7 @@ _playNetMidi(void* _unused)
             FmPlayer_controlNote(NOTE_CTRL_NOTE_ON);
         } else if (event.type == MIDI_STATUS_NOTE_OFF) {
             FmPlayer_controlNote(NOTE_CTRL_NOTE_OFF);
-        } else if(event.type == MIDI_STATUS_PGM_CHANGE) {
+        } else if (event.type == MIDI_STATUS_PGM_CHANGE) {
             setInstrumentFromMidiCode(event.eventData);
         } else {
             fprintf(
