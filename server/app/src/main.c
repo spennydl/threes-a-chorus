@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #include "midiPlayer.h"
 #include "tcp.h"
@@ -15,6 +16,8 @@
 int
 main()
 {
+    srand(time(NULL));
+
     Tcp_initializeTcpServer();
 
     MidiPlayer_initialize();
@@ -28,6 +31,12 @@ main()
 
         if(strcmp(input, "exit") == 0) {
             break;
+        }
+        else if(strcmp(input, "shuffle") == 0) {
+            char shuffledFile[256];
+            MidiPlayer_getRandomMidiPath(shuffledFile);
+            printf("Shuffled to MIDI file: %s\n", shuffledFile);
+            MidiPlayer_playMidiFile(shuffledFile);
         }
         else if(isdigit(input[0]) || (input[0] == '\n' && isdigit(input[1]))) {
             int newBpm = atoi(input);
