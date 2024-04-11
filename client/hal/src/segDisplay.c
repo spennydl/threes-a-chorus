@@ -122,9 +122,6 @@ _display(void* args)
 int
 SegDisplay_init(void)
 {
-    // Used to randomize the duration of blinking and opening eyes
-    srand(time(NULL));
-
     // Open I2C BUS 1
     if (I2C_openBus(I2C_BUS1, &i2c) < 0) {
         perror("segDisplay open");

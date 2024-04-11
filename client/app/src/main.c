@@ -18,6 +18,8 @@ main(int argc, char** argv)
         return 0;
     }
 
+    srand(time(NULL));
+
     Rfid_init();
     Singer_initialize();
     SegDisplay_init();
