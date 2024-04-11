@@ -296,14 +296,9 @@ Singer_initialize(void)
     return 0;
 }
 
-int
-Singer_update(void)
+void
+Singer_modulateVoice(void)
 {
-    Sensory_State state;
-
-    Sensory_reportSensoryState(&state);
-    _updateMood(&state);
-
     float pot = Sensory_getPotLevel();
     float light = Sensory_getLightReading();
 
@@ -324,6 +319,15 @@ Singer_update(void)
           currentVoice->opParams[FM_OPERATOR0]
             .algorithmConnections[FM_OPERATOR1]);
     }
+}
+
+int
+Singer_update(void)
+{
+    Sensory_State state;
+
+    Sensory_reportSensoryState(&state);
+    _updateMood(&state);
 
     _printSensoryReport(&state);
 

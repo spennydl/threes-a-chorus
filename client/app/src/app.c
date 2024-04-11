@@ -69,6 +69,7 @@ App_runApp(char* serverIp)
             }
             Singer_update();
         }
+        Singer_modulateVoice();
 
         struct pollfd stdinp = { .fd = STDIN_FILENO,
                                  .events = POLLIN | POLLPRI };
