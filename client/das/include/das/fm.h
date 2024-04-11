@@ -170,10 +170,10 @@ static const FmSynthParams FM_DEFAULT_PARAMS = {
     .opParams = { { .waveType = WAVETYPE_SINE,
                     .CmRatio = 1.0,
                     .outputStrength = 1.0,
-                    .algorithmConnections = { 0.0, 0.0, 0.0, 0.0 } },
+                    .algorithmConnections = { 0.0, 440.0, 0.0, 0.0 } },
                   {
                     .waveType = WAVETYPE_SINE,
-                    .CmRatio = 4.0,
+                    .CmRatio = 1.0,
                     .algorithmConnections = { 0 },
                   },
                   { .waveType = WAVETYPE_SINE,

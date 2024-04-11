@@ -30,17 +30,19 @@ _updateMood(Sensory_State* state);
 static void
 _printSensoryReport(Sensory_State* state)
 {
-    snprintf(report,
-             MAX_REPORT_SIZE,
-             "accel[%s] :: pot[%s] :: dist[%s] :: light[%s] :: button[%s] -->> "
-             "Index[%6.2f %6.2f]",
-             Sensory_inputLevelToStr(state->accelState),
-             Sensory_inputLevelToStr(state->potInteractionState),
-             Sensory_inputLevelToStr(state->proximityState),
-             Sensory_inputLevelToStr(state->lightLevel),
-             Sensory_inputLevelToStr(state->buttonState),
-             state->sensoryIndex,
-             state->sensoryTolerance);
+    snprintf(
+      report,
+      MAX_REPORT_SIZE,
+      "accel[%s] :: pot[%s] :: dist[%s] :: light[%s %f] :: button[%s] -->> "
+      "Index[%6.2f %6.2f]",
+      Sensory_inputLevelToStr(state->accelState),
+      Sensory_inputLevelToStr(state->potInteractionState),
+      Sensory_inputLevelToStr(state->proximityState),
+      Sensory_inputLevelToStr(state->lightLevel),
+      Sensory_getLightReading(),
+      Sensory_inputLevelToStr(state->buttonState),
+      state->sensoryIndex,
+      state->sensoryTolerance);
 
     printf("%s", "\033[K\r");
     printf("%s", report);
@@ -176,13 +178,6 @@ Singer_update(void)
     Sensory_reportSensoryState(state);
 
     _updateMood(state);
-
-    // float pot = Sensory_getPotLevel();
-    // printf("pot %f\n", pot);
-    float light = Sensory_getLightReading();
-
-    FmPlayer_updateOperatorAlgorithmConnection(
-      FM_OPERATOR0, FM_OPERATOR1, light * 8800);
 
     _printSensoryReport(state);
 

@@ -167,7 +167,4 @@ static const MelodyGenParams neutralParams = { .tempo = TEMPO_MEDIUM,
  * Generates a melody according to the mood.
  */
 void
-Melody_playMelody(const Mood* mood);
-
-void
 Melody_generateToSequencer(const MelodyGenParams* params);
