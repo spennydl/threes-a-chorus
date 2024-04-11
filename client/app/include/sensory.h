@@ -17,6 +17,8 @@
  */
 #pragma once
 
+#include "com/pwl.h"
+
 /** The type of the sensory index value. */
 typedef float Sensory_SensoryIndex;
 
