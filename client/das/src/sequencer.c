@@ -121,6 +121,10 @@ _sequencer(void* _data)
 
                 SequencerIdx currentPos = seq->playbackPosition;
 
+                if (currentPos == 0 && seq->loopCallback) {
+                    seq->loopCallback();
+                }
+
                 pthread_rwlock_rdlock(&_seqLock);
                 _runSequencerSlot(currentPos);
                 timeBetweenUpdates = seq->nsBetweenUpdates;
@@ -128,9 +132,6 @@ _sequencer(void* _data)
 
                 if (currentPos + 1 >= SEQUENCER_SLOTS) {
                     seq->playbackPosition = 0;
-                    if (seq->loopCallback) {
-                        seq->loopCallback();
-                    }
                 } else {
                     seq->playbackPosition = currentPos + 1;
                 }
@@ -142,8 +143,6 @@ _sequencer(void* _data)
                 break;
             }
             case SEQ_STOP: {
-                // TODO: Would love to be able to block on a condition without
-                // having to hold this unnecessary mutex
                 FmPlayer_controlNote(NOTE_CTRL_NOTE_OFF);
 
                 pthread_mutex_lock(&_stateCondMutex);

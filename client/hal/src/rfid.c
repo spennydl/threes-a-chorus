@@ -23,6 +23,7 @@ static Rfid_StatusCode rfidStatus;
 
 static pthread_t rfid_thread;
 static bool init;
+static bool run;
 
 ////////////////////// Function Prototypes /////////////////////////
 
@@ -374,7 +375,7 @@ _updateCurrentTagId(void* args)
     long long countTimeout = 0;
     const int N = 3;
 
-    while (true) {
+    while (run) {
         rfidStatus = Rfid_searchForTag();
 
         if (rfidStatus != RFID_OK) {
@@ -417,6 +418,7 @@ Rfid_init(void)
     // Set internal variables.
     currentTagId = 0xFF;
     init = true;
+    run = true;
 
     // Begin the RFID reader thread.
     pthread_create(&rfid_thread, NULL, _updateCurrentTagId, NULL);
@@ -427,6 +429,9 @@ Rfid_init(void)
 Rfid_StatusCode
 Rfid_shutdown(void)
 {
+    run = false;
+    pthread_join(rfid_thread, NULL);
+
     int result = Spi_shutdown();
     if (result != SPI_OK) {
         return RFID_RW_ERR;
