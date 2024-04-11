@@ -17,6 +17,8 @@
  */
 #pragma once
 
+#include "com/pwl.h"
+
 /** The type of the sensory index value. */
 typedef float Sensory_SensoryIndex;
 
@@ -77,6 +79,8 @@ typedef struct
     float cDistance;
     float cLight;
     float cButton;
+
+    Pwl_Function toleranceFunction;
     // TODO: the PWL tolerance function should go here.
 } Sensory_Preferences;
 
@@ -109,3 +113,9 @@ Sensory_inputLevelToStr(Sensory_InputLevel lvl);
  */
 void
 Sensory_close(void);
+
+float
+Sensory_getPotLevel(void);
+
+float
+Sensory_getLightReading(void);

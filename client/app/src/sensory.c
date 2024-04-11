@@ -527,10 +527,12 @@ Sensory_initialize(const Sensory_Preferences* prefs)
         return -4;
     }
 
-    Pwl_Function tolerance = PWL_LINEARFALL_P1N1_FUNCTION;
     _state.interactionTolerance = 0;
     _state.sensoryIndex = 0;
-    memcpy(&_state.interactionToleranceFn, &tolerance, sizeof(Pwl_Function));
+
+    memcpy(&_state.interactionToleranceFn,
+           &prefs->toleranceFunction,
+           sizeof(Pwl_Function));
 
     _state.constants[ACCEL_LO] = prefs->cAccelLow;
     _state.constants[ACCEL_HI] = prefs->cAccelHigh;
@@ -540,6 +542,18 @@ Sensory_initialize(const Sensory_Preferences* prefs)
     _state.constants[BUTTON_EVENTS] = prefs->cButton;
 
     return SENSORY_OK;
+}
+
+float
+Sensory_getPotLevel(void)
+{
+    return _state.sensorInputs[POTENTIOMETER_EVENTS];
+}
+
+float
+Sensory_getLightReading(void)
+{
+    return _state.sensorInputs[LIGHT_LEVEL];
 }
 
 int

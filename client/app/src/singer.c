@@ -1,5 +1,7 @@
 #include "com/config.h"
 
+#include "das/fm.h"
+#include "das/fmplayer.h"
 #include "sensory.h"
 #include "singer.h"
 
@@ -174,6 +176,13 @@ Singer_update(void)
     Sensory_reportSensoryState(state);
 
     _updateMood(state);
+
+    // float pot = Sensory_getPotLevel();
+    // printf("pot %f\n", pot);
+    float light = Sensory_getLightReading();
+
+    FmPlayer_updateOperatorAlgorithmConnection(
+      FM_OPERATOR0, FM_OPERATOR1, light * 8800);
 
     _printSensoryReport(state);
 
