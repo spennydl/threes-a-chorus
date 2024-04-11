@@ -103,12 +103,17 @@ static const uint8_t BLINK_SINGING[4] = { 0x81, 0x50, 0x81, 0x50 };
 // #define VOICE_NEUTRAL FM_DEFAULT_PARAMS
 #define VOICE_NEUTRAL FM_SHINYDRONE_PARAMS
 
+#define TOLERANCE_FUNCTION                                                     \
+    {                                                                          \
+        .ptsX = { 1.0 }, .ptsY = { 1.0 }, .pts = 0                             \
+    }
+
 /** Set your sensory preference constants. **/
 static const Sensory_Preferences sensoryPreferences = { .cAccelLow = 5,
                                                         .cAccelHigh = 5,
                                                         .cPot = 5,
                                                         .cDistance = 5,
                                                         .cLight = 0,
-                                                        .cButton = 5 };
-
-/** TODO: ... Set your interaction function. **/
+                                                        .cButton = 5,
+                                                        .toleranceFunction =
+                                                          TOLERANCE_FUNCTION };
