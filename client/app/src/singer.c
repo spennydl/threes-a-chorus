@@ -17,6 +17,14 @@
 #define IDLE_HYPERBOLA_NUMERATOR 1.0
 #endif
 
+#ifndef EMOTION_SLOW_PLAY_THRESHOLD
+#define EMOTION_SLOW_PLAY_THRESHOLD 0
+#endif
+
+#ifndef EMOTION_FAST_PLAY_THRESHOLD
+#define EMOTION_FAST_PLAY_THRESHOLD 0
+#endif
+
 #define HYPERBOLA_I(x) ((IDLE_HYPERBOLA_NUMERATOR) / (x))
 #define HYPERBOLA_II(x) ((-IDLE_HYPERBOLA_NUMERATOR) / (x))
 
@@ -33,7 +41,7 @@ static _Atomic(const MelodyGenParams*) melodyParams;
 
 static _Atomic int timesEmotionPlayed = 0;
 
-static int emotionPlayThreshold = 1;
+static int emotionPlayThreshold = EMOTION_SLOW_PLAY_THRESHOLD;
 
 /** Prints the current sensory state. */
 static void
@@ -187,7 +195,9 @@ _trySwitchToEmotion(const Emotion newEmotion)
 
         _updateEmotionParams();
 
-        emotionPlayThreshold = melodyParams->tempo == TEMPO_SLOW ? 1 : 2;
+        emotionPlayThreshold = melodyParams->tempo == TEMPO_SLOW
+                                 ? EMOTION_SLOW_PLAY_THRESHOLD
+                                 : EMOTION_FAST_PLAY_THRESHOLD;
         timesEmotionPlayed = 0;
         Sequencer_reset();
     }

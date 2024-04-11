@@ -14,8 +14,6 @@
 static bool isRunning = false;
 static int currentTagId = 0xFF;
 
-static Mood debugMood = { .emotion = EMOTION_HAPPY, .magnitude = 1.0 };
-
 static bool
 runMidiPlayer(int channel, char* ip)
 {
@@ -35,8 +33,6 @@ runMidiPlayer(int channel, char* ip)
 void
 App_runApp(char* serverIp)
 {
-    (void)debugMood;
-
     isRunning = true;
     bool midiPlayerIsRunning = false;
     bool onRfid = false;
