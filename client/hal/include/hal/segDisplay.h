@@ -32,6 +32,9 @@ SegDisplay_init(void);
 void
 SegDisplay_shutdown(void);
 
+void
+SegDisplay_setIsSinging(bool isSinging);
+
 /*
  * Display a pattern that represents an emotion. Internally, an emotion
  * corresponds with two patterns - one for stationary eyes, and one for

@@ -44,6 +44,15 @@ Singer_initialize(void);
 int
 Singer_update(void);
 
+void
+Singer_sing(void);
+
+void
+Singer_rest(void);
+
+void
+Singer_modulateVoice(void);
+
 /** Set whether the segDisplay should be displaying the SINGING mood or not. */
 void
 SegDisplay_setIsSinging(bool isSinging);
@@ -53,4 +62,4 @@ Mood*
 Singer_getMood(void);
 
 void
-Singer_shutdown();
+Singer_shutdown(void);

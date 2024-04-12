@@ -2,6 +2,8 @@
 
 #include "das/fm.h"
 #include "das/fmplayer.h"
+#include "das/melodygen.h"
+#include "das/sequencer.h"
 #include "sensory.h"
 #include "singer.h"
 
@@ -9,8 +11,22 @@
 
 // If we want the IDLE mood to occur more generously, we can increase the
 // numerator to give the hyperbolae a greater area.
-#define HYPERBOLA_I(x) (1.0 / x)
-#define HYPERBOLA_II(x) (-1.0 / x)
+//
+// Define this in config.h if you wish to use it
+#ifndef IDLE_HYPERBOLA_NUMERATOR
+#define IDLE_HYPERBOLA_NUMERATOR 1.0
+#endif
+
+#ifndef EMOTION_SLOW_PLAY_THRESHOLD
+#define EMOTION_SLOW_PLAY_THRESHOLD 0
+#endif
+
+#ifndef EMOTION_FAST_PLAY_THRESHOLD
+#define EMOTION_FAST_PLAY_THRESHOLD 0
+#endif
+
+#define HYPERBOLA_I(x) ((IDLE_HYPERBOLA_NUMERATOR) / (x))
+#define HYPERBOLA_II(x) ((-IDLE_HYPERBOLA_NUMERATOR) / (x))
 
 static char report[MAX_REPORT_SIZE];
 
@@ -19,6 +35,14 @@ static Mood mood = {
     .magnitude = 0.0,
 };
 
+static const FmSynthParams* currentVoice;
+
+static _Atomic(const MelodyGenParams*) melodyParams;
+
+static _Atomic int timesEmotionPlayed = 0;
+
+static int emotionPlayThreshold = EMOTION_SLOW_PLAY_THRESHOLD;
+
 /** Prints the current sensory state. */
 static void
 _printSensoryReport(Sensory_State* state);
@@ -26,6 +50,15 @@ _printSensoryReport(Sensory_State* state);
 /** Update the singer's mood. */
 static void
 _updateMood(Sensory_State* state);
+
+static void
+_trySwitchToEmotion(const Emotion newEmotion);
+
+static void
+_updateEmotionParams(void);
+
+static void
+_onSequencerLoop(void);
 
 static void
 _printSensoryReport(Sensory_State* state)
@@ -88,6 +121,7 @@ _updateMood(Sensory_State* state)
     // shape with 2 hyperbola graphs. The graph we use depends on the quadrant;
     // y = 1/x covers Quadrants I and III, y = -1/x covers Quadrants II and IV.
     bool withinHyperbola = false;
+    Emotion newEmotion = mood.emotion;
 
     switch (quadrant) {
         case QUADRANT_NONE:
@@ -97,28 +131,28 @@ _updateMood(Sensory_State* state)
             if (y <= HYPERBOLA_I(x)) { // point falls below the hyperbola line
                 withinHyperbola = true;
             } else {
-                mood.emotion = EMOTION_HAPPY;
+                newEmotion = EMOTION_HAPPY;
             }
             break;
         case QUADRANT_II:
             if (y <= HYPERBOLA_II(x)) {
                 withinHyperbola = true;
             } else {
-                mood.emotion = EMOTION_SAD;
+                newEmotion = EMOTION_SAD;
             }
             break;
         case QUADRANT_III:
             if (y >= HYPERBOLA_I(x)) {
                 withinHyperbola = true;
             } else {
-                mood.emotion = EMOTION_ANGRY;
+                newEmotion = EMOTION_ANGRY;
             }
             break;
         case QUADRANT_IV:
             if (y >= HYPERBOLA_II(x)) {
                 withinHyperbola = true;
             } else {
-                mood.emotion = EMOTION_OVERSTIMULATED;
+                newEmotion = EMOTION_OVERSTIMULATED;
             }
             break;
         default:
@@ -126,7 +160,7 @@ _updateMood(Sensory_State* state)
     }
 
     if (withinHyperbola) {
-        mood.emotion = EMOTION_IDLE;
+        newEmotion = EMOTION_IDLE;
     }
 
     // With that, we have finished determining the emotion. Now, the magnitude.
@@ -148,19 +182,122 @@ _updateMood(Sensory_State* state)
     // divide by that to normalize this too
 
     mood.magnitude = (sqrt(powf(x, 2) + powf(y, 2))) / sqrt(2);
+
+    _trySwitchToEmotion(newEmotion);
+}
+
+static void
+_trySwitchToEmotion(const Emotion newEmotion)
+{
+    if (mood.emotion != newEmotion &&
+        timesEmotionPlayed > emotionPlayThreshold) {
+        mood.emotion = newEmotion;
+
+        _updateEmotionParams();
+
+        emotionPlayThreshold = melodyParams->tempo == TEMPO_SLOW
+                                 ? EMOTION_SLOW_PLAY_THRESHOLD
+                                 : EMOTION_FAST_PLAY_THRESHOLD;
+        timesEmotionPlayed = 0;
+        Sequencer_reset();
+    }
+}
+
+static void
+_updateEmotionParams(void)
+{
+    // Retrieve the params for an emotion. Each emotion is associated with
+    // both a voice (the timbre) and a melody (the notes to be played).
+    // Voice params defined in fm.h and config.h
+    // Melody params defined in melodygen.h
+    switch (mood.emotion) {
+        case EMOTION_HAPPY:
+            currentVoice = &VOICE_HAPPY;
+            melodyParams = &happyParams;
+            break;
+        case EMOTION_SAD:
+            currentVoice = &VOICE_SAD;
+            melodyParams = &sadParams;
+            break;
+        case EMOTION_ANGRY:
+            currentVoice = &VOICE_ANGRY;
+            melodyParams = &angryParams;
+            break;
+        case EMOTION_OVERSTIMULATED:
+            currentVoice = &VOICE_OVERSTIMULATED;
+            melodyParams = &overstimulatedParams;
+            break;
+        case EMOTION_NEUTRAL:
+            currentVoice = &VOICE_NEUTRAL;
+            melodyParams = &neutralParams;
+            break;
+        default:
+            currentVoice = &VOICE_NEUTRAL;
+            melodyParams = &neutralParams;
+            break;
+    }
+}
+
+static void
+_onSequencerLoop(void)
+{
+    Sequencer_clear();
+    MelodyGenParams params = *melodyParams;
+
+    // For melody params, factor in the mood magnitude [0.0 - 1.0]
+    params.jumpChance *= mood.magnitude;
+    // melodyParams.noteDensity *= mood.magnitude;
+    params.upDownTendency *= mood.magnitude;
+    params.stoccatoLegatoTendency *= mood.magnitude;
+
+    // Pass the final params to the respective functions
+    FmPlayer_setSynthVoice(currentVoice);
+    Melody_generateToSequencer(&params);
+    timesEmotionPlayed++;
 }
 
 void
 Singer_shutdown(void)
 {
+    Sequencer_destroy();
+
     Sensory_close();
+
+    FmPlayer_close();
+}
+
+void
+Singer_sing(void)
+{
+    Sequencer_reset();
+}
+
+void
+Singer_rest(void)
+{
+    Sequencer_stop();
 }
 
 int
 Singer_initialize(void)
 {
+    _updateEmotionParams();
+
+    if (FmPlayer_initialize(currentVoice) < 0) {
+        fprintf(stderr, "Failed to intiialize FMplayer\n");
+        return -1;
+    }
+
     if (Sensory_initialize(&sensoryPreferences) < 0) {
         fprintf(stderr, "Failed to initialize sensory system\n");
+        FmPlayer_close();
+        return -1;
+    }
+
+    if (Sequencer_initialize(120, _onSequencerLoop) < 0) {
+        fprintf(stderr, "Failed to init sequencer\n");
+        FmPlayer_close();
+        Sensory_close();
         return -1;
     }
 
@@ -169,17 +306,40 @@ Singer_initialize(void)
     return 0;
 }
 
+void
+Singer_modulateVoice(void)
+{
+    float pot = Sensory_getPotLevel();
+    float light = Sensory_getLightReading();
+
+    if (fabs(light) > 0.1) {
+        FmPlayer_updateOperatorCm(FM_OPERATOR1, light * 10);
+    } else {
+        FmPlayer_updateOperatorCm(FM_OPERATOR1,
+                                  currentVoice->opParams[FM_OPERATOR1].CmRatio);
+    }
+
+    if (fabs(pot) > 0.05) {
+        FmPlayer_updateOperatorAlgorithmConnection(
+          FM_OPERATOR0, FM_OPERATOR1, pot * 8800);
+    } else {
+        FmPlayer_updateOperatorAlgorithmConnection(
+          FM_OPERATOR0,
+          FM_OPERATOR1,
+          currentVoice->opParams[FM_OPERATOR0]
+            .algorithmConnections[FM_OPERATOR1]);
+    }
+}
+
 int
 Singer_update(void)
 {
-    Sensory_State sensorState;
-    Sensory_State* state = &sensorState;
+    Sensory_State state;
 
-    Sensory_reportSensoryState(state);
+    Sensory_reportSensoryState(&state);
+    _updateMood(&state);
 
-    _updateMood(state);
-
-    _printSensoryReport(state);
+    _printSensoryReport(&state);
 
     return 0;
 }
