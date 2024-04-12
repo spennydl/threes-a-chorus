@@ -67,24 +67,6 @@ App_runApp(char* serverIp)
         }
         Singer_modulateVoice();
 
-        struct pollfd stdinp = { .fd = STDIN_FILENO,
-                                 .events = POLLIN | POLLPRI };
-        int poll_status;
-        if ((poll_status = poll(&stdinp, 1, SHUTDOWN_STDINPOLL_TIMEOUT_MS)) <
-            0) {
-            // I'm not sure this is likely to happen. If it does we'll simply
-            // continue.
-            perror("SHUTDOWN: ERR: Polling stdin failed");
-        }
-        if (poll_status > 0) {
-            if ((stdinp.revents & (POLLIN | POLLPRI)) > 0) {
-                // Read the line sent from stdin, otherwise it will get sent
-                // to the shell after we exit.
-                char buf[SHUTDOWN_STDINPOLL_BUFSIZ];
-                fgets(buf, SHUTDOWN_STDINPOLL_BUFSIZ, stdin);
-
-                isRunning = false;
-            }
-        }
+        Timeutils_sleepForMs(SHUTDOWN_STDINPOLL_TIMEOUT_MS);
     }
 }
