@@ -77,13 +77,14 @@ _play(void* arg)
     while (_fmPlayer->running) {
         // set synth params if we need to
         pthread_rwlock_rdlock(&_fmPlayer->updateRwLock);
-        if (_fmPlayer->updatesNeeded & UPDATE_VOICE_BIT) {
+        if ((_fmPlayer->updatesNeeded & UPDATE_VOICE_BIT) == UPDATE_VOICE_BIT) {
             Fm_updateParams(_fmPlayer->synth, &_fmPlayer->params);
         }
 
         // apply any pending operator updates
         for (int op = 0; op < FM_OPERATORS; op++) {
-            if (_fmPlayer->updatesNeeded & (UPDATE_NEEDED_BIT << op)) {
+            if ((_fmPlayer->updatesNeeded & (UPDATE_NEEDED_BIT << op)) ==
+                (UPDATE_NEEDED_BIT << op)) {
                 Fm_updateOpParams(
                   _fmPlayer->synth, op, &_fmPlayer->params.opParams[op]);
             }
@@ -376,11 +377,13 @@ void
 FmPlayer_setSynthVoice(const FmSynthParams* newVoice)
 {
     pthread_rwlock_wrlock(&_fmPlayer->updateRwLock);
-    memcpy(&_fmPlayer->params, newVoice, sizeof(FmSynthParams));
+    if (newVoice != NULL) {
+        memcpy(&_fmPlayer->params, newVoice, sizeof(FmSynthParams));
+    }
 
     // Set update voice bit and clear operator update bits as those updates
     // are now invalid
-    _fmPlayer->updatesNeeded = UPDATE_VOICE_BIT;
+    _fmPlayer->updatesNeeded |= UPDATE_VOICE_BIT;
 
     pthread_rwlock_unlock(&_fmPlayer->updateRwLock);
 }

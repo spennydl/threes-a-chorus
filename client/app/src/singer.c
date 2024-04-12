@@ -311,23 +311,28 @@ Singer_modulateVoice(void)
 {
     float pot = Sensory_getPotLevel();
     float light = Sensory_getLightReading();
+    static bool potIsHigh = false;
+    static bool lightIsHigh = false;
 
     if (fabs(light) > 0.1) {
+        lightIsHigh = true;
         FmPlayer_updateOperatorCm(FM_OPERATOR1, light * 10);
     } else {
-        FmPlayer_updateOperatorCm(FM_OPERATOR1,
-                                  currentVoice->opParams[FM_OPERATOR1].CmRatio);
+        if (lightIsHigh) {
+            FmPlayer_setSynthVoice(NULL);
+            lightIsHigh = false;
+        }
     }
 
     if (fabs(pot) > 0.05) {
         FmPlayer_updateOperatorAlgorithmConnection(
           FM_OPERATOR0, FM_OPERATOR1, pot * 8800);
+        potIsHigh = true;
     } else {
-        FmPlayer_updateOperatorAlgorithmConnection(
-          FM_OPERATOR0,
-          FM_OPERATOR1,
-          currentVoice->opParams[FM_OPERATOR0]
-            .algorithmConnections[FM_OPERATOR1]);
+        if (potIsHigh) {
+            FmPlayer_setSynthVoice(NULL);
+            potIsHigh = false;
+        }
     }
 }
 
