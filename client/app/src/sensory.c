@@ -145,7 +145,7 @@ static struct TristateIntegrator _lightLevelTsInt = {
 /** Determines accelerometer input state. */
 static struct TristateIntegrator _accelTsInt = {
     .stateThresholds = { 0.0, 0.001, CUBE_ROOT_0_25 },
-    .countThresholds = { 10, 10, 5 },
+    .countThresholds = { 10, 7, 3 },
 };
 
 /** Determines distance sensor/proximity state. */
