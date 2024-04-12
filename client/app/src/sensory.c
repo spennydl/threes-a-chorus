@@ -405,7 +405,11 @@ _updateAccelerometer(void)
 static void
 _updateDistanceSensor(void)
 {
-    double dist = Ultrasonic_getDistanceInCm();
+    double dist = INFINITY;
+    if (useUltrasonic) {
+        dist = Ultrasonic_getDistanceInCm();
+    }
+
     // TODO Bit of a kludge. getDist should probably just return zero eh?
     if (dist == INFINITY) {
         dist = 0;
@@ -516,7 +520,7 @@ Sensory_initialize(const Sensory_Preferences* prefs)
         return SENSORY_EACCEL;
     }
 
-    if (!Ultrasonic_init()) {
+    if (useUltrasonic && !Ultrasonic_init()) {
         Accel_close();
         return SENSORY_EULTSON;
     }
