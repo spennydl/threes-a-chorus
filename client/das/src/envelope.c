@@ -40,10 +40,10 @@ Env_getValueAndAdvance(Env_Envelope* env)
 
         x += env->step;
 
-        if (x >= env->gatePoint) {
+        if (x >= env->gatePoint && (env->state & ENV_GATE_BIT) == 0) {
             if (env->repeatPoint >= 0) {
                 x = env->repeatPoint;
-            } else if ((env->state & ENV_GATE_BIT) == 0) {
+            } else {
                 x = env->gatePoint;
             }
         }
