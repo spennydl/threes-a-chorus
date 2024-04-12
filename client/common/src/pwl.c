@@ -10,12 +10,11 @@ Pwl_sample(Pwl_Function* pwl, float samplePoint)
     float y1 = 0;
 
     for (i = 0; i < pwl->pts - 1; i++) {
-        if (pwl->ptsX[i] <= samplePoint && pwl->ptsX[i + 1] >= samplePoint) {
+        if (pwl->ptsX[i] <= samplePoint) {
             x0 = pwl->ptsX[i];
             x1 = pwl->ptsX[i + 1];
             y0 = pwl->ptsY[i];
             y1 = pwl->ptsY[i + 1];
-            break;
         }
     }
 
