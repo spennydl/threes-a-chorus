@@ -1,3 +1,8 @@
+/**
+ * @file i2c.c
+ * @brief Implementation of i2c communication module.
+ * @author Spencer Leslie 301571329
+ */
 #include "hal/i2c.h"
 #include "com/fileio.h"
 #include <fcntl.h>

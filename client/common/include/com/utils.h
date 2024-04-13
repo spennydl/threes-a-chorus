@@ -5,8 +5,6 @@
 
 #pragma once
 
-#include <stdlib.h>
-
 /**
  * Gets a random int between the min and the max params, inclusively.
  */

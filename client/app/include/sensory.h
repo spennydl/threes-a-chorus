@@ -114,8 +114,18 @@ Sensory_inputLevelToStr(Sensory_InputLevel lvl);
 void
 Sensory_close(void);
 
+/**
+ * Gets the current potentiometer channel level.
+ *
+ * The sensory system does not consider the current reading of the
+ * potentiometer. Instead, it considers the difference between the last reading
+ * and the current reading.
+ */
 float
 Sensory_getPotLevel(void);
 
+/**
+ * Gets the current reading from the light sensor.
+ */
 float
 Sensory_getLightReading(void);

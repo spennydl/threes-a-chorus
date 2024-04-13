@@ -1,3 +1,8 @@
+/**
+ * @file netMidiPlayer.c
+ * @brief Implementation of the network midi player.
+ * @author Spencer Leslie and Jet Simon
+ */
 #include "netMidiPlayer.h"
 
 #include "das/fmplayer.h"
@@ -9,16 +14,31 @@
 #include <stdlib.h>
 #include <string.h>
 
+/** Format string for the SUB message set to subscribe to a channel. */
 #define SUBSCRIBE_TO_CHANNEL_MESSAGE_FMT "SUB %d"
 
+/** Thread handle for the midi player thread. */
 static pthread_t _midiPlayerThread;
+/** Should we play? */
 static int play;
 
+/** A midi event as received from the server. */
 typedef struct
 {
     int type;
     int eventData;
 } MidiEvent;
+
+/** Deserializes a midi event received over the network to a MidiEvent. */
+static MidiEvent
+_deserializeMidiEvent(const char* message);
+/** Sets the current synth voice to the instrument given by the instrument code.
+ */
+static void
+_setInstrumentFromMidiCode(int instrumentCode);
+/** Thread worker function. Reads events and plays them as they are received. */
+static void*
+_playNetMidi(void* _unused);
 
 static MidiEvent
 _deserializeMidiEvent(const char* message)
@@ -36,7 +56,7 @@ _deserializeMidiEvent(const char* message)
 }
 
 static void
-setInstrumentFromMidiCode(int instrumentCode)
+_setInstrumentFromMidiCode(int instrumentCode)
 {
     if (instrumentCode <= 8) {
         // Piano
@@ -49,45 +69,47 @@ setInstrumentFromMidiCode(int instrumentCode)
         FmPlayer_setSynthVoice(&FM_BIG_PARAMS);
     } else if (instrumentCode <= 32) {
         // Guitar
-        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS);
     } else if (instrumentCode <= 40) {
         // Bass
         FmPlayer_setSynthVoice(&FM_BASS_PARAMS);
     } else if (instrumentCode <= 48) {
         // Strings
-        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS);
     } else if (instrumentCode <= 56) {
         // Ensemble
         FmPlayer_setSynthVoice(&FM_AHH_PARAMS);
     } else if (instrumentCode <= 64) {
         // Brass
-        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS);
     } else if (instrumentCode <= 72) {
         // Reed
-        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS);
     } else if (instrumentCode <= 80) {
         // Pipe
         FmPlayer_setSynthVoice(&FM_CHIRP_PARAMS);
     } else if (instrumentCode <= 88) {
         // Synth Lead
-        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_DEFAULT_PARAMS);
     } else if (instrumentCode <= 96) {
         // Synth Pad
         FmPlayer_setSynthVoice(&FM_SHINYDRONE_PARAMS);
     } else if (instrumentCode <= 104) {
         // Synth FX
-        FmPlayer_setSynthVoice(&FM_BEEPBOOP_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_BEEPBOOP_PARAMS);
     } else if (instrumentCode <= 112) {
         // "Ethnic"
-        FmPlayer_setSynthVoice(&FM_YOI_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_YOI_PARAMS);
     } else if (instrumentCode <= 120) {
         // Percussive
-        FmPlayer_setSynthVoice(&FM_BASS_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_BASS_PARAMS);
     } else if (instrumentCode <= 128) {
         // Sound FX
-        FmPlayer_setSynthVoice(&FM_BEEPBOOP_PARAMS); // TODO
+        FmPlayer_setSynthVoice(&FM_BEEPBOOP_PARAMS);
     } else {
-        printf("Could not turn %d into an instrument!\n", instrumentCode);
+        fprintf(stderr,
+                "WARN: Could not turn %d into an instrument!\n",
+                instrumentCode);
     }
 }
 
@@ -120,7 +142,7 @@ _playNetMidi(void* _unused)
         } else if (event.type == MIDI_STATUS_NOTE_OFF) {
             FmPlayer_controlNote(NOTE_CTRL_NOTE_OFF);
         } else if (event.type == MIDI_STATUS_PGM_CHANGE) {
-            setInstrumentFromMidiCode(event.eventData);
+            _setInstrumentFromMidiCode(event.eventData);
         } else {
             fprintf(
               stderr, "WARN: Could not parse event type %d\n", event.type);

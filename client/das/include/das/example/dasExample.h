@@ -1,3 +1,8 @@
+/**
+ * @file dasExample.h
+ * @brief An example showcasing the use of the FmSynthesizer and sequencer.
+ * @author Spencer Leslie.
+ */
 #pragma once
 
 // Main program to build the application
@@ -26,6 +31,7 @@ _sleepForMs(long long delayInMs)
     nanosleep(&reqDelay, (struct timespec*)NULL);
 }
 
+/** A note for the sequencer. Used to define a song. */
 typedef struct
 {
     FmPlayer_NoteCtrl ctrl;
@@ -33,6 +39,8 @@ typedef struct
 } SequencerNote;
 
 #define SEQ_LEN (8 * 4)
+
+/* Songs for the sequencer to play. */
 
 const SequencerNote NOISY_SONG[SEQ_LEN] = {
     { .ctrl = NOTE_CTRL_NOTE_ON, .note = A2 },
@@ -160,6 +168,7 @@ const SequencerNote BASS_SONG[SEQ_LEN] = {
     { .ctrl = NOTE_CTRL_NONE, .note = NOTE_NONE },
 };
 
+/** A song. */
 typedef struct
 {
     const SequencerNote* notes;
@@ -167,6 +176,7 @@ typedef struct
     const char* name;
 } Song;
 
+/** Sends a song to the sequencer. */
 static void
 _sequence(const SequencerNote* song)
 {
@@ -175,9 +185,11 @@ _sequence(const SequencerNote* song)
     }
 }
 
+/** The example. */
 int
 example(void)
 {
+    // Songs to play and the voices to use to play them.
     const Song songs[] = {
         { .notes = BELL_SONG,
           .voice = &FM_DEFAULT_PARAMS,
@@ -194,6 +206,7 @@ example(void)
           .name = "Chirp voice" },
     };
 
+    // Drones to play and the voices to use to play them.
     const Song drones[] = {
         { .notes = NULL, .voice = &FM_BIG_PARAMS, .name = "'Big' drone" },
         { .notes = NULL,
@@ -204,6 +217,7 @@ example(void)
           .name = "'Shiny' drone" }
     };
 
+    // Used to poll stdin so that pressing enter exits.
     struct pollfd stdinp = { .fd = STDIN_FILENO, .events = POLLIN | POLLPRI };
 
     size_t msSlept = 0;
@@ -215,8 +229,10 @@ example(void)
     double voltReading = 0;
     double op0Cm = 1.0;
 
+    // Start the FmPlayer. This will also initialized the FmSynthesizer.
     FmPlayer_initialize(songs[song_idx].voice);
 
+    // Initialize the sequencer.
     Sequencer_initialize(120);
 
     //------------------
@@ -230,7 +246,8 @@ example(void)
             }
 
             Sequencer_stop();
-            _sleepForMs(1000); // let the note ring out a bit
+
+            _sleepForMs(1000); // let the last note ring out a bit
 
             _sequence(songs[song_idx].notes);
             FmPlayer_setSynthVoice(songs[song_idx].voice);
@@ -241,7 +258,6 @@ example(void)
             op0Cm = songs[song_idx].voice->opParams[FM_OPERATOR0].CmRatio;
             msSlept = 0;
             song_idx++;
-            // Sequencer_start();
         }
 
         // poll for input on STDIN
@@ -263,6 +279,8 @@ example(void)
             }
         }
 
+        // Read the on-board potentiometer and use it to modulate the synth
+        // voice.
         double newAdcReading =
           ((double)adc_voltage_raw(ADC_CHANNEL0) / ADC_MAX_READING) * 10;
         // Snap the reading at the midpoint
@@ -282,7 +300,8 @@ example(void)
             voltReading = newAdcReading;
         }
 
-        _sleepForMs(100); // lets the sequencer go around twice
+        // Lets the sequencer go around twice
+        _sleepForMs(100);
         msSlept += 100;
         if (msSlept >= msToSleep) {
             msSlept = 0;

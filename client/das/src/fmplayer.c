@@ -1,3 +1,8 @@
+/**
+ * @file fmplayer.c
+ * @brief Implementation of the FmPlayer.
+ * @author Spencer Leslie 301571329
+ */
 #include "das/fmplayer.h"
 #include "das/fm.h"
 #include "das/wavetable.h"
@@ -10,41 +15,72 @@
 #include <stdio.h>
 
 /** This is the main paramter for tuning latency. This will set the length of
- * the hardware buffer in microseconds. Setting to 0.05 seconds currently gives
- * a period of about 735 samples, which means we will have very low latency
- * (0.05 seconds is great), but will require more CPU time to keep up. */
+ * the hardware buffer in microseconds. In practice, the actual length of the
+ * buffer is determined by what is available in the hardware. */
 #define ALSA_BUFFERTIME 200000
 
+/** Flags determining whether the synth voice or any operators need updating. */
 #define UPDATE_NEEDED_BIT 0x1
 #define UPDATE_VOICE_BIT (0x1 << FM_OPERATORS)
 
+/** FmPlayer private data. */
 typedef struct
 {
+    /** Note to play. */
     Note note;
+    /** Control operation that needs to be performed. */
     FmPlayer_NoteCtrl ctrl;
+    /** Are we running? */
     int running;
+    /** Flags indicating which updates need to be made. */
     int updatesNeeded;
 
+    /** Pointer to a sample buffer that receives PCM frames from the synth. */
     int16_t* sampleBuffer;
 
+    /** Handle to the PCM device. */
     snd_pcm_t* pcmHandle;
+    /** PCM hardware buffer size. */
     snd_pcm_uframes_t bufferSize;
+    /** PCM hardware period size. */
     snd_pcm_uframes_t periodSize;
+
+    /** The synthesizer.*/
     FmSynthesizer* synth;
 
+    /** Worker thread that drives the synth. */
     pthread_t playerThread;
-    // Lock for updates to the synth params.
-    // We only lock updates to the params, not the note or note control.
-    // Updating the note or note control will be atomic since they are both
-    // 32-bit ints and should be aligned.
+
+    /**
+     * Lock for updates to the synth params.
+     * We only lock updates to the params, not the note or note control.
+     * Updating the note or note control will be atomic since they are both
+     * 32-bit ints and should be aligned. */
     pthread_rwlock_t updateRwLock;
 
+    /** Current synth params. */
     FmSynthParams params;
 } _FmPlayer;
 
+/** Pointer to the Fm Player. */
 static _FmPlayer* _fmPlayer;
 
-/** Write samples to the PCM driver. */
+/** Writes samples to the PCM driver. */
+static int
+_writeToPcmBuffer(snd_pcm_t* pcm, int16_t* buffer, size_t nSamples);
+/** Main worker thread function. */
+static void*
+_play(void* arg);
+/** Configures audio hardware parameters. */
+static int
+_setHwparams(snd_pcm_t* handle, snd_pcm_hw_params_t* params);
+/** Configures audio driver software parameters. */
+static int
+_setSwparams(snd_pcm_t* handle, snd_pcm_sw_params_t* swparams);
+/** Configures Alsa for our needs. */
+static int
+_configureAlsa(snd_pcm_t* handle);
+
 static int
 _writeToPcmBuffer(snd_pcm_t* pcm, int16_t* buffer, size_t nSamples)
 {
@@ -158,6 +194,9 @@ _play(void* arg)
 static int
 _setHwparams(snd_pcm_t* handle, snd_pcm_hw_params_t* params)
 {
+    // Implementation adapted from the one given at
+    // https://www.alsa-project.org/alsa-doc/alsa-lib/_2test_2pcm_8c-example.html
+
     unsigned int rrate;
     int err;
 
@@ -271,6 +310,9 @@ _setHwparams(snd_pcm_t* handle, snd_pcm_hw_params_t* params)
 static int
 _setSwparams(snd_pcm_t* handle, snd_pcm_sw_params_t* swparams)
 {
+    // Implementation adapted from the one given at
+    // https://www.alsa-project.org/alsa-doc/alsa-lib/_2test_2pcm_8c-example.html
+
     int err;
 
     /* get the current swparams */

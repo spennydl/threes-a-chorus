@@ -1,3 +1,7 @@
+/**
+ * @file timeutils.c
+ * @brief Implementation of the time utils.
+ */
 #include "com/timeutils.h"
 #include <time.h>
 

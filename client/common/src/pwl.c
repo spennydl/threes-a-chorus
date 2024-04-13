@@ -1,3 +1,8 @@
+/**
+ * @file pwl.c
+ * @brief Implementation of the piecewise linear function module.
+ * @author Spencer Leslie 301571329
+ */
 #include "com/pwl.h"
 
 float

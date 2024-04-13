@@ -16,11 +16,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <string.h>
 #include <sys/wait.h>
-
-#include "com/config.h"
-#include "com/fileio.h"
 
 #define ACCEL_MAX_READING 2047
 #define ACCEL_MIN_READING -2048

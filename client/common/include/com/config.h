@@ -1,7 +1,12 @@
+/**
+ * @file config.h
+ * @brief Configures hardware access and personality.
+ */
 #pragma once
 
 #include "sensory.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 
 /* ******************************************
@@ -55,13 +60,32 @@ static const uint8_t BLINK_SINGING[4] = { 0x81, 0x50, 0x81, 0x50 };
 // #define SEGDISPLAY_OUTA_REG 0x14
 // #define SEGDISPLAY_OUTB_REG 0x15
 
+/* ********************************************
+Comment the following for Zen Cape GREEN *
+ ****************************************/
+
+///////////////// accel.c ////////////////////////
+// #define ACCEL_ADDR 0x1C
+// #define ACCEL_ACTIVE_MODE 0x01
+// #define ACCEL_CTRL_REG1 0x2A
+// #define ACCEL_DATA_READ 0x01
+// #define ACCEL_NUM_BYTES_TO_READ 7
+// #define ACCEL_INDEX_ADJUST 2
+//
+////////////////// segDisplay.c  /////////////////////
+// #define SEGDISPLAY_I2C_ADDRESS 0x20
+// #define SEGDISPLAY_DIRA_REG 0x00
+// #define SEGDISPLAY_DIRB_REG 0x01
+// #define SEGDISPLAY_OUTA_REG 0x14
+// #define SEGDISPLAY_OUTB_REG 0x15
+//
+//
 // static const uint8_t EYES_HAPPY[4] = { 0x0C, 0x91, 0x0C, 0x91 };
 // static const uint8_t EYES_SAD[4] = { 0x19, 0x20, 0x40, 0x30 };
 // static const uint8_t EYES_ANGRY[4] = { 0x40, 0x04, 0x10, 0x04 };
 // static const uint8_t EYES_OVERSTIMULATED[4] = { 0x50, 0x0A, 0x50, 0x0A };
 // static const uint8_t EYES_NEUTRAL[4] = { 0x84, 0x04, 0x06, 0x04 };
 // static const uint8_t EYES_SINGING[4] = { 0x04, 0xA1, 0x04, 0xA1 };
-
 // static const uint8_t BLINK_HAPPY[4] = { 0x04, 0x20, 0x04, 0x20 };
 // static const uint8_t BLINK_SAD[4] = { 0x19, 0x00, 0x40, 0x10 };
 // static const uint8_t BLINK_ANGRY[4] = { 0x00, 0x28, 0x00, 0x22 };
@@ -72,25 +96,25 @@ static const uint8_t BLINK_SINGING[4] = { 0x81, 0x50, 0x81, 0x50 };
 /* ********************************************
  *    Define your board's personality here!   *
  * ********************************************/
-
 /** Choose one of three emotions to project when idle. **/
-#define EMOTION_IDLE EMOTION_HAPPY
+// #define EMOTION_IDLE EMOTION_HAPPY
 // #define EMOTION_IDLE EMOTION_NEUTRAL
-// #define EMOTION_IDLE EMOTION_SAD
+#define EMOTION_IDLE EMOTION_NEUTRAL
 
 /** Choose a synth voice for each emotion. **/
 // (1) Happy
 // #define VOICE_HAPPY FM_BELL_PARAMS
-#define VOICE_HAPPY FM_CHIRP_PARAMS
+#define VOICE_HAPPY FM_BELL_PARAMS
 
 // (2) Sad
-#define VOICE_SAD FM_CRY_PARAMS
+// #define VOICE_SAD FM_CRY_PARAMS
 // #define VOICE_SAD FM_SHINYDRONE_PARAMS
-// #define VOICE_SAD FM_YOI_PARAMS
+#define VOICE_SAD FM_CRY_PARAMS
 
 // (3) Angry
 // #define VOICE_ANGRY FM_BIG_PARAMS
-#define VOICE_ANGRY FM_SAWBLADE_PARAMS
+// #define VOICE_ANGRY FM_SAWBLADE_PARAMS
+#define VOICE_ANGRY FM_GLITCHBOOP_PARAMS
 
 // (4) Overstimulated
 #define VOICE_OVERSTIMULATED FM_BEEPBOOP_PARAMS
@@ -100,25 +124,32 @@ static const uint8_t BLINK_SINGING[4] = { 0x81, 0x50, 0x81, 0x50 };
 // #define VOICE_NEUTRAL FM_AHH_PARAMS
 // #define VOICE_NEUTRAL FM_BASS_PARAMS
 // #define VOICE_NEUTRAL FM_BRASS_PARAMS
-// #define VOICE_NEUTRAL FM_DEFAULT_PARAMS
 #define VOICE_NEUTRAL FM_SHINYDRONE_PARAMS
+// #define VOICE_NEUTRAL FM_SHINYDRONE_PARAMS
 
 /** Set your tolerace function. Your first X and Y point must be 0.0! **/
 #define TOLERANCE_FUNCTION                                                     \
     {                                                                          \
-        .ptsX = { 0.0, 0.2, 0.4, 0.6, 0.8, 1.0 },                              \
-        .ptsY = { 0.0, 5.0, 10.0, 15.0, 20.0, 25.0 }, .pts = 6                 \
+        .ptsX = { 0.0, 0.1, 0.2, 0.6, 0.8, 1.0 },                              \
+        .ptsY = { 0.0, 10.0, -10.0, -10.0, -10.0, -10.0 }, .pts = 6            \
     }
 
 // Example for Jet's Tolerance Function ptsY:
-// .ptsY = { 0.0, -5.0, -10.0, -15.0, -20.0, -25.0 }, .pts = 6            
+// .ptsY = { 0.0, -5.0, -10.0, -15.0, -20.0, -25.0 }, .pts = 6
 
 /** Set your sensory preference constants. **/
-static const Sensory_Preferences sensoryPreferences = { .cAccelLow = 0,
-                                                        .cAccelHigh = 0,
-                                                        .cPot = 0,
-                                                        .cDistance = -10,
-                                                        .cLight = 0,
-                                                        .cButton = 10,
+static const Sensory_Preferences sensoryPreferences = { .cAccelLow = 10,
+                                                        .cAccelHigh = -10,
+                                                        .cPot = -14,
+                                                        .cDistance = 1,
+                                                        .cLight = -1,
+                                                        .cButton = -14,
                                                         .toleranceFunction =
                                                           TOLERANCE_FUNCTION };
+
+#define IDLE_HYPERBOLA_NUMERATOR 50.0
+
+#define EMOTION_SLOW_PLAY_THRESHOLD 1
+#define EMOTION_FAST_PLAY_THRESHOLD 2
+
+static const bool useUltrasonic = true;

@@ -75,6 +75,15 @@ I2C_write(I2C_BusHandle* bus,
           const uint8_t* data,
           size_t nBytes);
 
+/**
+ * Read from an I2C bus.
+ *
+ * @param bus The bus to read from.
+ * @param reg The device register to read from.
+ * @param data Pointer to a buffer where data will be written.
+ * @param n_bytes Number of bytes to read.
+ * @return int 0 on success, < 0 on error.
+ */
 int
 I2C_read(I2C_BusHandle* bus,
          I2C_RegisterAddress reg,

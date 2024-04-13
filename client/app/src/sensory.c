@@ -1,4 +1,10 @@
+/**
+ * @file sensory.c
+ * @brief Implementation of the sensory input module.
+ * @author Spencer Leslie 301571329
+ */
 #include "sensory.h"
+#include "com/config.h"
 #include "com/pwl.h"
 #include "com/timeutils.h"
 #include "hal/accel.h"
@@ -10,6 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 
+// Nanoseconds between sample loops.
 #define NS_BETWEEN_SAMPLES (10000000)
 
 // threshold between "gentle" and "rough" handling
@@ -49,6 +56,11 @@
 /**
  * The state of interaction across all channels. Includes tolerance and sensory
  * index.
+ *
+ * Several fields in this struct are written to from the sensory input thread
+ * and read from in other threads. We don't synchronize as the values are all 4
+ * bytes wide and will be aligned, so reading and writing will happen
+ * atomically.
  */
 struct InteractionState
 {
@@ -67,15 +79,13 @@ struct InteractionState
     Sensory_SensoryIndex interactionTolerance;
     Sensory_SensoryIndex sensoryIndex;
 
-    /** Current averaged and smoothed sensor input values */
+    /** Current averaged and smoothed sensor input values. */
     float sensorInputs[SENSORY_INPUTS];
     /** The constants to use for the weighted sum. */
     float constants[SENSORY_INPUTS];
     /** The piecewise linear function determining input tolerance over time. */
     Pwl_Function interactionToleranceFn;
 };
-
-// float constants[SENSORY_INPUTS] = { 10, -3, -3, 4, 5, -4 };
 
 /**
  * @brief Integrates a discrete quantity over time and determines which of 3
@@ -410,7 +420,8 @@ _updateDistanceSensor(void)
         dist = Ultrasonic_getDistanceInCm();
     }
 
-    // TODO Bit of a kludge. getDist should probably just return zero eh?
+    // TODO Bit of a kludge. getDistanceInCm() should probably just
+    // return zero, eh?
     if (dist == INFINITY) {
         dist = 0;
     } else {

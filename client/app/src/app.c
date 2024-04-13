@@ -1,3 +1,8 @@
+/**
+ * @file app.c
+ * @brief Main application loop implementation.
+ * @author Jet Simon, Louie Lu, Spencer Leslie
+ */
 #include <poll.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -11,11 +16,17 @@
 #include <stdio.h>
 #include <unistd.h>
 
+/** Are we currently running? */
 static bool isRunning = false;
+/** Holds the last read RFID tag ID. */
 static int currentTagId = 0xFF;
 
+/** Subscribes to a midi channel and begins playing from the stream. */
 static bool
-runMidiPlayer(int channel, char* ip)
+_runMidiPlayer(int channel, char* ip);
+
+static bool
+_runMidiPlayer(int channel, char* ip)
 {
     if (NetMidi_openMidiChannel(ip, channel) < 0) {
         printf("Error: Could not open midi channel\n");
@@ -51,7 +62,7 @@ App_runApp(char* serverIp)
                        currentTagId,
                        currentTagId % 16);
                 midiPlayerIsRunning =
-                  runMidiPlayer(currentTagId % 16, serverIp);
+                  _runMidiPlayer(currentTagId % 16, serverIp);
                 SegDisplay_setIsSinging(true);
             }
             // otherwise let the midi player play
