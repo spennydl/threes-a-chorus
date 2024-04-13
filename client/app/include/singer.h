@@ -31,8 +31,7 @@ typedef enum
 
 typedef struct
 {
-    atomic_uint emotion; // I'm anticipating that both segDisplay and
-                         // melodygen might want to access this, so it's atomic.
+    atomic_uint emotion; // Multiple modules want access to this.
     float magnitude;
 } Mood;
 

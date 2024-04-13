@@ -19,12 +19,15 @@ static bool init = false;
 static bool run = true;
 
 //////////////////////// Function Prototypes /////////////////////////////
+// Turn off any patterns on the display.
 static void
 SegDisplay_turnOffDigits(void);
 
+// Display a pattern on the left digit given a top and bot pattern.
 static void
 SegDisplay_displayLeftPattern(uint8_t top, uint8_t bot);
 
+// Display a pattern on the right digit given a top and bot pattern.
 static void
 SegDisplay_displayRightPattern(uint8_t top, uint8_t bot);
 
@@ -34,7 +37,7 @@ static void
 SegDisplay_displayPattern(const uint8_t* pattern);
 
 // Threaded function that retrieves the current mood, and displays the
-// corresponding emotion. Threaded separate from app.c because we don't want
+// corresponding emotion. Threaded separately from app.c because we don't want
 // flicker to be caused by other app activities getting in the way of the
 // displaying.
 static void*
@@ -77,8 +80,6 @@ SegDisplay_displayRightPattern(uint8_t top, uint8_t bot)
     fileio_write(GPIO_DIR_RIGHT, "1");
 }
 
-// Display a pattern on each digit by rapidly switching on and off between
-// turning on the left and right digit.
 static void
 SegDisplay_displayPattern(const uint8_t* pattern)
 {

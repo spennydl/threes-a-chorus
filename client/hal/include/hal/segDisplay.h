@@ -1,3 +1,9 @@
+/**
+ * @file segDisplay.h
+ * @brief Provides control for the BeagleBone's 14-seg display.
+ * @author Louie Lu 301291418.
+ */
+
 #pragma once
 
 #include "hal/i2c.h"
@@ -32,6 +38,12 @@ SegDisplay_init(void);
 void
 SegDisplay_shutdown(void);
 
+/*
+ * Set whether the singer is currently singing or not. "Singing" is a special
+ * mood that is not determined by the normal emotion parameters, so call this
+ * function from the higher level to notify when the singer should change their
+ * expression to singing.
+ */
 void
 SegDisplay_setIsSinging(bool isSinging);
 
