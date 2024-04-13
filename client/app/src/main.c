@@ -24,7 +24,7 @@ main(int argc, char** argv)
     Singer_initialize();
     SegDisplay_init();
 
-    // Does not create a new thread
+    // argv[1] is the host ip
     App_runApp(argv[1]);
 
     SegDisplay_shutdown();
