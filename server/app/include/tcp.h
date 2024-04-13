@@ -61,8 +61,6 @@ Tcp_sendFile(char* path, int socketFd);
 void
 Tcp_attachToTcpServer(const TcpObserver* observer);
 
-// TODO: Remove an observer? Not sure if needed really for our usecase
-
 /**
  * Worker thread function for the server. It is not static because there were compilation issues.
 */
