@@ -1,11 +1,17 @@
+
+/**
+ * @file eyesExample.h
+ * 
+ * Displays all 6 moods in sequence, each mood lasting 5 seconds. 
+ * To use, claer main.c and replace with eyesExample().
+ */
+
 #include "com/timeutils.h"
 #include "hal/i2c.h"
 #include "hal/segDisplay.h"
 
 #define MOOD_DURATION_ms 5000
 
-// Displays all 6 moods in sequence, each mood lasting 5 seconds.
-// To use, clear main.c and replace with eyesExample().
 void
 eyesExample(void)
 {

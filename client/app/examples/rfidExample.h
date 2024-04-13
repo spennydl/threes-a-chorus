@@ -1,3 +1,10 @@
+/**
+ * @file rfidExample.h
+ * 
+ * An example that is meant to closely mimic how the RFID module will actually be used in our project. 
+ * Reads continuously for a tag, returning the UID of the tag if found, or 0xFF if no tag is in range.
+*/
+
 #include "hal/rfid.h"
 
 // Arbitrary
@@ -5,8 +12,6 @@
 
 byte currentTagId;
 
-// This example is meant to closely mimic how the RFID module will actually be
-// used in our project (minus the printf).
 void
 Rfid_example(void)
 {
