@@ -1,10 +1,14 @@
+/**
+ * @file wavetable.c
+ * @brief Implementation of the wave table.
+ * @author Spencer Leslie 301571329
+ */
 #include "das/wavetable.h"
 #include <malloc.h>
 #include <math.h>
 #include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
 
+/** 255 samples of one period of a sine wave. */
 static const double sineTable[] = { 0,
                                     0.024541228522912,
                                     0.049067674327418,
@@ -264,6 +268,7 @@ static const double sineTable[] = { 0,
 
 };
 
+/** 255 samples of one period of a square wave. */
 static const double squareTable[] = {
     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
     1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
@@ -284,6 +289,7 @@ static const double squareTable[] = {
     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 };
 
+/** 255 samples of one period of a saw wave.*/
 static const double sawTable[] = { 0,
                                    0.007812500000000,
                                    0.015625000000000,

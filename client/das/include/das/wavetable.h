@@ -1,12 +1,9 @@
 /**
  * @file wavetable.h
  * @brief Wave tables for generating audio waves.
- * @author Spencer Leslie
+ * @author Spencer Leslie 301571329
  */
 #pragma once
-
-#include <math.h>
-#include <stdint.h>
 
 /** Number of samples in the tables. */
 #define WT_N_SAMPLES 255

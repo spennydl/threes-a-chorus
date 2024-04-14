@@ -1,3 +1,8 @@
+/**
+ * @file sequencer.c
+ * @brief Implementation of the sequencer.
+ * @author Spencer Leslie 301571329
+ */
 #include "das/sequencer.h"
 #include "com/timeutils.h"
 #include "das/fmplayer.h"
@@ -6,16 +11,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+/** Slots in the sequencer. */
 #define SEQUENCER_SLOTS (SEQ_BEAT_SLOTS * SEQ_SIXTEENTH_NOTE_IN_QUARTER_NOTE)
 
+/** Converts BPM to nanoseconds between slots. */
 #define BPM_TO_NS(B) (NS_IN_MINUTE / (B) / SEQ_SIXTEENTH_NOTE_IN_QUARTER_NOTE)
 
+/** Get a sequencer slot index given quarter, eighth, and sixteenth note index.
+ */
 #define SEQ_SLOT_IDX(Q, E, S)                                                  \
     (((Q) * SEQ_SIXTEENTH_NOTE_IN_QUARTER_NOTE) +                              \
      ((E) * SEQ_EIGHTH_NOTE_IN_QUARTER_NOTE) + (S))
 
+/** Number of NS in a minute. */
 #define NS_IN_MINUTE 60000000000
 
+/** States the sequencer can be in. */
 enum sequencerState
 {
     SEQ_RUN,
@@ -24,68 +35,40 @@ enum sequencerState
     SEQ_END
 };
 
+/** Internal sequencer struct. */
 struct sequencer
 {
+    /** The sequence. */
     SequencerOp sequence[SEQUENCER_SLOTS];
+    /** Current playback position. */
     SequencerIdx playbackPosition;
+    /** BPM we're playing at. */
     SequencerBpm bpm;
+    /** Optional callback. */
     loopCallbackFn loopCallback;
+    /** ns between advancing one slot (sixteenth note). */
     unsigned long long nsBetweenUpdates;
 };
 
+/** The sequencer. */
 static struct sequencer* seq;
+/** Current sequencer state. */
 static _Atomic enum sequencerState _sequencerState = SEQ_STOP;
-
+/** The sequencer worker thread.*/
 static pthread_t _sequencerThread;
+/** Lock protecting the sequencer data. */
 static pthread_rwlock_t _seqLock = PTHREAD_RWLOCK_INITIALIZER;
+/** State condition used for pausing the sequencer when stopped. */
 static pthread_cond_t _stateCond = PTHREAD_COND_INITIALIZER;
+/** Mutex required for the state condition.*/
 static pthread_mutex_t _stateCondMutex = PTHREAD_MUTEX_INITIALIZER;
 
+/** Performs the actions in the sequencer slot referenced by the given index. */
+static void
+_runSequencerSlot(SequencerIdx idx);
+/** Main sequencer thread function. */
 static void*
 _sequencer(void*);
-
-int
-Sequencer_initialize(SequencerBpm bpm, loopCallbackFn callback)
-{
-    seq = malloc(sizeof(struct sequencer));
-    if (!seq) {
-        return SEQ_EALLOC;
-    }
-
-    memset(seq, 0, sizeof(struct sequencer));
-
-    for (SequencerIdx i = 0; i < SEQUENCER_SLOTS; i++) {
-        seq->sequence[i].note = NOTE_NONE;
-    }
-
-    seq->bpm = bpm;
-    seq->nsBetweenUpdates = BPM_TO_NS(bpm);
-    seq->loopCallback = callback;
-
-    // TODO: error
-    pthread_create(&_sequencerThread, NULL, _sequencer, NULL);
-
-    return SEQ_OK;
-}
-
-SequencerIdx
-Sequencer_getSlotIndex(int quarter, int eighth, int sixteenth)
-{
-    return SEQ_SLOT_IDX(quarter, eighth, sixteenth);
-}
-
-void
-Sequencer_fillSlot(SequencerIdx idx,
-                   FmPlayer_NoteCtrl control,
-                   Note note,
-                   FmSynthParams* synthParams)
-{
-    pthread_rwlock_wrlock(&_seqLock);
-    seq->sequence[idx].op = control;
-    seq->sequence[idx].note = note;
-    seq->sequence[idx].synthParams = synthParams;
-    pthread_rwlock_unlock(&_seqLock);
-}
 
 static void
 _runSequencerSlot(SequencerIdx idx)
@@ -121,7 +104,11 @@ _sequencer(void* _data)
 
                 SequencerIdx currentPos = seq->playbackPosition;
 
+                // Call the callback first.
                 if (currentPos == 0 && seq->loopCallback) {
+                    // TODO: This doesn't allow the user to cancel the
+                    // sequencer. We should at least check the state after
+                    // calling this to see if it was changed.
                     seq->loopCallback();
                 }
 
@@ -166,6 +153,49 @@ _sequencer(void* _data)
             }
         }
     }
+}
+
+int
+Sequencer_initialize(SequencerBpm bpm, loopCallbackFn callback)
+{
+    seq = malloc(sizeof(struct sequencer));
+    if (!seq) {
+        return SEQ_EALLOC;
+    }
+
+    memset(seq, 0, sizeof(struct sequencer));
+
+    for (SequencerIdx i = 0; i < SEQUENCER_SLOTS; i++) {
+        seq->sequence[i].note = NOTE_NONE;
+    }
+
+    seq->bpm = bpm;
+    seq->nsBetweenUpdates = BPM_TO_NS(bpm);
+    seq->loopCallback = callback;
+
+    // TODO: error
+    pthread_create(&_sequencerThread, NULL, _sequencer, NULL);
+
+    return SEQ_OK;
+}
+
+SequencerIdx
+Sequencer_getSlotIndex(int quarter, int eighth, int sixteenth)
+{
+    return SEQ_SLOT_IDX(quarter, eighth, sixteenth);
+}
+
+void
+Sequencer_fillSlot(SequencerIdx idx,
+                   FmPlayer_NoteCtrl control,
+                   Note note,
+                   FmSynthParams* synthParams)
+{
+    pthread_rwlock_wrlock(&_seqLock);
+    seq->sequence[idx].op = control;
+    seq->sequence[idx].note = note;
+    seq->sequence[idx].synthParams = synthParams;
+    pthread_rwlock_unlock(&_seqLock);
 }
 
 void

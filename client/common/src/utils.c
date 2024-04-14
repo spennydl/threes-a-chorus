@@ -1,4 +1,9 @@
+/*
+ * @file utils.c
+ * @brief Implementation of utility functions.
+ */
 #include "com/utils.h"
+#include <stdlib.h>
 
 int
 Utils_getRandomIntBtwn(int min, int max)

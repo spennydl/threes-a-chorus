@@ -1,3 +1,8 @@
+/**
+ * @file singer.c
+ * @brief Implementation of the singer module.
+ * @author Spencer Leslie and Louie Lu.
+ */
 #include "com/config.h"
 
 #include "das/fm.h"
@@ -6,41 +11,56 @@
 #include "das/sequencer.h"
 #include "sensory.h"
 #include "singer.h"
+#include <math.h>
+#include <stdio.h>
 
+/** Max length of the report written to stdout */
 #define MAX_REPORT_SIZE 1024
 
-// If we want the IDLE mood to occur more generously, we can increase the
-// numerator to give the hyperbolae a greater area.
-//
-// Define this in config.h if you wish to use it
+/** If we want the IDLE mood to occur more generously, we can increase the
+ * numerator to give the hyperbola a greater area.
+ *
+ * Define this in config.h if you wish to use it. Sets the width of the
+ * hyperbola bounding idleness. */
 #ifndef IDLE_HYPERBOLA_NUMERATOR
 #define IDLE_HYPERBOLA_NUMERATOR 1.0
 #endif
 
+/** Override in config.h. Determines the number of times to play a slow melody
+ * before allowing a mood switch. */
 #ifndef EMOTION_SLOW_PLAY_THRESHOLD
 #define EMOTION_SLOW_PLAY_THRESHOLD 0
 #endif
 
+/** Override in config.h. Determines the number of times to play a fast or
+ * medium tempo melody before allowing a mood switch. */
 #ifndef EMOTION_FAST_PLAY_THRESHOLD
 #define EMOTION_FAST_PLAY_THRESHOLD 0
 #endif
 
+/** Hyperbola for determining the idleness region. */
 #define HYPERBOLA_I(x) ((IDLE_HYPERBOLA_NUMERATOR) / (x))
 #define HYPERBOLA_II(x) ((-IDLE_HYPERBOLA_NUMERATOR) / (x))
 
+/** Buffer for the report printed to stdout. */
 static char report[MAX_REPORT_SIZE];
 
+/** Singer's current mood. */
 static Mood mood = {
     .emotion = EMOTION_IDLE,
     .magnitude = 0.0,
 };
 
+/** The current FmSynth voice that the singer is using. */
 static const FmSynthParams* currentVoice;
 
+/** Pointer to the current melody generation parameters. */
 static _Atomic(const MelodyGenParams*) melodyParams;
 
+/** How many times we've played a full melody since the last mood switch. */
 static _Atomic int timesEmotionPlayed = 0;
 
+/** The threshold of times to play a melody before allowing a mood switch. */
 static int emotionPlayThreshold = EMOTION_SLOW_PLAY_THRESHOLD;
 
 /** Prints the current sensory state. */
@@ -51,12 +71,17 @@ _printSensoryReport(Sensory_State* state);
 static void
 _updateMood(Sensory_State* state);
 
+/** Attempts to switch the mood to a new emotion. May not actually switch if the
+ * play threshold has not been reached. */
 static void
 _trySwitchToEmotion(const Emotion newEmotion);
 
+/** Updates the synth voice and melody generation params to the configured
+ * params for the current emotion. */
 static void
 _updateEmotionParams(void);
 
+/** Callback called by the sequencer when it loops around. */
 static void
 _onSequencerLoop(void);
 

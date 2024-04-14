@@ -1,7 +1,11 @@
 /**
  * @file fm.c
  * @brief FM Synthesizer Implementation.
- * @author Spencer Leslie
+ *
+ * libfmsynth was used as a reference implementation.
+ * https://github.com/Themaister/libfmsynth/tree/master
+ *
+ * @author Spencer Leslie 301571329
  */
 #include "das/fm.h"
 #include "das/envelope.h"
@@ -313,7 +317,6 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
 {
     _FmSynth* synth = s->__FmSynth;
 
-    // I believe stack vars are zered by default?
     float opSamples[FM_OPERATORS] = { 0 };
     float opMod[FM_OPERATORS] = { 0 };
     for (size_t s = 0; s < nSamples; s++) {
@@ -331,6 +334,8 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
         for (int op = 0; op < FM_OPERATORS; op++) {
             int idx = op * FM_OPERATORS;
             opMod[op] = 0;
+            // The algorithm connections are stored as a matrix. Multiplying the
+            // output of the operators by this matrix gives the modulation.
             for (int modOp = 0; modOp < FM_OPERATORS; modOp++) {
                 float modIdx =
                   synth->opModBy[idx + modOp] / synth->opFreq[modOp];
@@ -353,7 +358,7 @@ Fm_generateSamples(FmSynthesizer* s, int16_t* sampleBuf, size_t nSamples)
             finalSample += opSamples[op] * synth->opOutput[op];
 
             if (finalSample >= 1) {
-                fprintf(stderr, "WARN: sample greater than 1!\n");
+                fprintf(stderr, "WARN: clipping!\n");
                 finalSample = 1;
             }
         }

@@ -2,46 +2,19 @@
  * @file envelope.h
  * @brief ADSR Envelope Generator.
  *
- * Calculates and updates a linear ADSR envelope.
+ * Calculates a sound loudness envelope. Envelopes are given as a piecewise
+ * linear function, a gate point, a total length in milliseconds, and an
+ * optional repeat point.
  *
- * I'm not particularly happy with this implementation, it deserves an overhaul.
+ * When triggered, the envelope will advance until it reaches the gate point. If
+ * a repeat point is specified, the envelope will return to the repeat point and
+ * play back again. Otherwise it will be held at the gate point until the
+ * envelope is gated.
  *
- * TODO: rewrite this!
+ * Once an envelope is gated, whether or not a repeat point is specified, it
+ * will be allowed past the gate point and will run to completion.
  *
- * I think the idea of attack, decay, sustain, and release all as distinct
- * phases is too specific to be useful.
- *
- * In an ideal world, we would allow the user to specify an arbitrary curve and
- * a gate point. When the envelope is triggered, we would simply sample the
- * curve until we reach the gate point, at which time we would simply play back
- * the sample at the gate point. When a gate event is received we would then
- * play the rest of the curve. Further, this approach also supports looping the
- * envelope, effectively turning them into arbitrary low-frequency oscillators.
- *
- * Specifying and sampling an arbitrary curve could be done using besier curves,
- * but that feels pretty out of scope for this project and difficult to
- * configure given that we don't have a UI. Instead, I would like to
- * re-implement this using wave tables as a comprimise.
- *
- * Moving forward, the plan would be:
- * - Generate some functions we can use as envelopes and create wave tables out
- * of them. Useful functions to have may be linear ADSR (eg, the classic thing
- * we've implemented here), exponential falloff (e^-x), a "swell" (parbaps an
- * upside-down parabola, or a linear ramp up/down), etc.
- * - Allow the user to specify an envelope as 3 (optionally 4) pieces of data:
- *   - A function.
- *   - The length of the envelope (so we stretch them horizontally in time)
- *   - The gate point - e.g. how far through the envelope we get before we
- *     require gate to continue
- *   - A loop point, if we wish to loop the envelope. If present, instead of
- *   - waiting for a gate signal when we reach the gate point we would simply
- *     return to the loop point and keep playing.
- *
- * This feels like a good compromise. We would lose the ability to specify
- * arbitrary envelopes, but we can provide baked envelopes that are common and
- * useful, and the implementation should be a snap.
- *
- * @author Spencer Leslie
+ * @author Spencer Leslie 3015713429
  */
 #pragma once
 
@@ -51,34 +24,69 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/** The envelope. */
 typedef struct
 {
+    // "Private" data. Do not touch these.
+    /** The step that the sample point is moved by each time the envelope
+     * advances. Should not be changed externally. */
     float step;
+    /** The current sample point. */
     float current;
-    float gatePoint;
-    float repeatPoint;
+    /** Used to specify a "minimum" value to combat "clicking" that occurs when
+     * an envelope is retriggered and suddenly drops to 0. */
     float min;
-    long lengthMs;
 
+    // "public" data. Set these before calling Env_prepareEnvelope.
+    /** The envelope's gate point. */
+    float gatePoint;
+    /** The envelope's repeat point. The envelope will repeat if the repeat
+     * point is greater than 0.*/
+    float repeatPoint;
+    /** Length of the envelope im milliseconds. */
+    int lengthMs;
+    /** The PWL specifying the envelope. */
     Pwl_Function fn;
 
+    // "private" data. Included at the end as to not mess with alignment.
+    /** Current envelope state. */
     uint8_t state;
 } Env_Envelope;
 
+/**
+ * Prepares the envelope for use.
+ *
+ * @param env The envelope to set up. Before calling this function,
+ *            env->gatePoint, env->repeatPoint, env->lengthMs, and env->fn
+ *            should all have been set.
+ * @param sampleRate The rate in samples/second that the envelope will be
+ * sampled at.
+ */
 void
 Env_prepareEnvelope(Env_Envelope* env, size_t sampleRate);
 
+/**
+ * Samples the current value of the envelope and advances it.
+ *
+ * @param env The envelope to sample and advance.
+ * @return float The envelope value.
+ */
 float
 Env_getValueAndAdvance(Env_Envelope* env);
 
+/**
+ * Trigger and envelope. If the envelope was already running, it will be
+ * retriggered and start again at 0.
+ *
+ * @param env The envelope to trigger.
+ */
 void
 Env_trigger(Env_Envelope* env);
 
+/**
+ * Gate the envelope, allowing it to run to completion.
+ *
+ * @param env The envelope to gate.
+ */
 void
 Env_gate(Env_Envelope* env);
-
-bool
-Env_isTriggered(const Env_Envelope* env);
-
-bool
-Env_isGated(const Env_Envelope* env);

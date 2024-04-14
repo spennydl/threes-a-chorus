@@ -1,3 +1,8 @@
+/**
+ * @file netMidiPlayer.h
+ * @brief Subscribes to a midi channel and streams midi events over the network.
+ * @author Spencer Leslie 301571329
+ */
 #pragma once
 
 typedef int NetMidi_Channel;
@@ -7,12 +12,13 @@ typedef int NetMidi_Channel;
  * @param hostname The ip of the server
  * @param channel The channel you want to subscribe to (really just an int)
  * @return int Return 0 if successful, < 0 if not
-*/
+ */
 int
 NetMidi_openMidiChannel(const char* hostname, NetMidi_Channel channel);
 
 /**
- * Shut down NetMidi and stop subscribing to events. Used when taken off an RFID tag.
-*/
+ * Shut down NetMidi and stop subscribing to events. Used when taken off an RFID
+ * tag.
+ */
 void
 NetMidi_stop(void);

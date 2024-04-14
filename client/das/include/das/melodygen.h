@@ -1,7 +1,15 @@
+/**
+ * @file melodygen.h
+ * @brief Melody Generation Module
+ *
+ * Generates melodies according to given parameters to the sequencer for
+ * playback.
+ *
+ * @author Spencer Leslie 301571329
+ */
 #pragma once
 
 #include "das/fm.h"
-#include "singer.h"
 
 /** A fast bpm. */
 #define TEMPO_FAST 180
@@ -156,15 +164,15 @@ static const MelodyGenParams overstimulatedParams = { .tempo = TEMPO_FAST,
                                                         0.5 };
 
 // sparse drone/boops
-static const MelodyGenParams neutralParams = { .tempo = TEMPO_MEDIUM,
+static const MelodyGenParams neutralParams = { .tempo = TEMPO_SLOW,
                                                .key = KEY_MAJOR,
                                                .jumpChance = 0.5,
                                                .noteDensity = 0.3,
                                                .upDownTendency = 0.5,
-                                               .stoccatoLegatoTendency = 0.5 };
+                                               .stoccatoLegatoTendency = 0.9 };
 
 /**
- * Generates a melody according to the mood.
+ * Generates a melody according the given params.
  */
 void
 Melody_generateToSequencer(const MelodyGenParams* params);

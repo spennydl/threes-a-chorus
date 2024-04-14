@@ -4,6 +4,7 @@
  * @author Spencer Leslie 301571329
  */
 #include "hal/accel.h"
+#include "com/config.h"
 #include "hal/i2c.h"
 #include <stdio.h>
 

@@ -1,15 +1,14 @@
 /**
  * @file singer.h
  * @brief Main singer application module.
- * @author Spencer Leslie 301571329
+ * @author Spencer Leslie and Louie Lu
  */
 #pragma once
 
-#include <math.h>
 #include <stdatomic.h>
 #include <stdbool.h>
-#include <stdio.h>
 
+/** Quandrants of the plane. Used to map a sensory index to a mood. */
 typedef enum
 {
     QUADRANT_NONE,
@@ -19,6 +18,7 @@ typedef enum
     QUADRANT_IV,
 } Quadrant;
 
+/** The emotions a singer can be in. */
 typedef enum
 {
     EMOTION_HAPPY,
@@ -29,6 +29,7 @@ typedef enum
     EMOTION_SINGING,
 } Emotion;
 
+/** A singer's mood. */
 typedef struct
 {
     atomic_uint emotion; // Multiple modules want access to this.
@@ -43,12 +44,16 @@ Singer_initialize(void);
 int
 Singer_update(void);
 
+/** Starts the singer singing random melodies according to mood. */
 void
 Singer_sing(void);
 
+/** Stops the singer's singing. */
 void
 Singer_rest(void);
 
+/** Modulates the current synth voice according to the potentiometer and light
+ * sensor reading. */
 void
 Singer_modulateVoice(void);
 
@@ -60,5 +65,6 @@ SegDisplay_setIsSinging(bool isSinging);
 Mood*
 Singer_getMood(void);
 
+/** Shuts down the singer module. */
 void
 Singer_shutdown(void);

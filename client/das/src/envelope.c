@@ -2,16 +2,36 @@
  * @file envelope.c
  * @brief ADSR envelope implementation.
  *
- * I expect this to change at some point.
- *
- * @author Spencer Leslie
+ * @author Spencer Leslie 301571329
  */
 #include "das/envelope.h"
 #include "com/pwl.h"
 #include <stdbool.h>
 
+/** State bit indicating trigger. */
 #define ENV_TRIGGER_BIT (0x1)
+/** State bit indicating gate. */
 #define ENV_GATE_BIT (0x2)
+
+/** Is the envelope triggered? */
+static bool
+_isTriggered(const Env_Envelope* env);
+
+/** Has the envelope been gated? */
+static bool
+_isGated(const Env_Envelope* env);
+
+static bool
+_isTriggered(const Env_Envelope* env)
+{
+    return (env->state & ENV_TRIGGER_BIT) == ENV_TRIGGER_BIT;
+}
+
+static bool
+_isGated(const Env_Envelope* env)
+{
+    return (env->state & ENV_GATE_BIT) == ENV_GATE_BIT;
+}
 
 void
 Env_prepareEnvelope(Env_Envelope* env, size_t sampleRate)
@@ -27,7 +47,7 @@ float
 Env_getValueAndAdvance(Env_Envelope* env)
 {
     float value = 0;
-    if (env->state & ENV_TRIGGER_BIT) {
+    if (_isTriggered(env)) {
         float x = env->current;
         float min = env->min;
 
@@ -40,7 +60,7 @@ Env_getValueAndAdvance(Env_Envelope* env)
 
         x += env->step;
 
-        if (x >= env->gatePoint && (env->state & ENV_GATE_BIT) == 0) {
+        if (x >= env->gatePoint && !_isGated(env)) {
             if (env->repeatPoint >= 0) {
                 x = env->repeatPoint;
             } else {
@@ -62,7 +82,7 @@ Env_getValueAndAdvance(Env_Envelope* env)
 void
 Env_trigger(Env_Envelope* env)
 {
-    if (Env_isTriggered(env)) {
+    if (_isTriggered(env)) {
         env->min = Pwl_sample(&env->fn, env->current);
     }
     env->current = 0;
@@ -73,15 +93,4 @@ void
 Env_gate(Env_Envelope* env)
 {
     env->state |= ENV_GATE_BIT;
-}
-
-bool
-Env_isTriggered(const Env_Envelope* env)
-{
-    return (env->state & ENV_TRIGGER_BIT) == ENV_TRIGGER_BIT;
-}
-bool
-Env_isGated(const Env_Envelope* env)
-{
-    return (env->state & ENV_GATE_BIT) == ENV_GATE_BIT;
 }

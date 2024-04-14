@@ -1,3 +1,8 @@
+/**
+ * @file tcp.c
+ * @brief Implementation of tcp client.
+ * @author Jet Simon
+ */
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>

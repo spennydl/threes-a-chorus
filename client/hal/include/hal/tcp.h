@@ -1,6 +1,7 @@
 /**
  * @file tcp.h
  * @brief For TCP client handling
+ * @author Jet Simon
  */
 #pragma once
 

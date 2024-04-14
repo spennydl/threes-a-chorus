@@ -1,10 +1,9 @@
 /**
  * @file adc.h
  * @brief Analog to Digital Converter functions.
- * @author Spencer Leslie 301571329.
+ * @author Spencer Leslie 301571329
  */
-#ifndef SPENNYDL_ADC_H
-#define SPENNYDL_ADC_H
+#pragma once
 
 /**
  * ADC error code. This value is chosen to be well outside of the valid range
@@ -57,5 +56,3 @@ adc_voltage(adc_channel channel);
  */
 double
 adc_raw_to_voltage(double raw_value);
-
-#endif // SPENNYDL_ADC_H

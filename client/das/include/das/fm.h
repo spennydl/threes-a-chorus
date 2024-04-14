@@ -8,7 +8,7 @@
  * other operators or themselves, and any or all operators can be mixed together
  * and sound.
  *
- * @author Spencer Leslie
+ * @author Spencer Leslie 301571329
  */
 #pragma once
 
@@ -20,9 +20,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/** A440 as a reference frequency. */
+/** A440 and C2 as reference frequencies. */
 #define A_440 440.0
-
 #define C2_HZ 65.41
 
 /** Notes. */
@@ -94,11 +93,15 @@ typedef enum
     B6,
 } NoteOffset;
 
+/** NOTE_NONE is defined outside NoteOffset as negative notes are allowed. */
 #define NOTE_NONE INT_MIN
 
+/** Notes should be signed to allow negative offsets, and NoteOffset is an
+ * unsigned enum. */
 typedef int Note;
 
-/** Operators available. Adding more is as simple as adding more values here. */
+/** Available synth operators. Adding more is as simple as adding more values
+ * here. */
 typedef enum
 {
     FM_OPERATOR0 = 0,
@@ -114,6 +117,9 @@ typedef struct
     /**
      * The CM ratio, or the ratio between this operators frequency and the base
      * frequency.
+     *
+     * If this is negative, the operator will be fixed to the note given by
+     * fixToNote (see below).
      */
     float CmRatio;
 
@@ -135,6 +141,8 @@ typedef struct
     /** Type of the wave the operator should output. */
     WaveType waveType;
 
+    /** Note to fix the operator to. The operator will stay at this note's
+     * frequency regardless of the carrier. */
     Note fixToNote;
 } OperatorParams;
 
@@ -157,6 +165,9 @@ typedef struct
      */
     OperatorParams opParams[FM_OPERATORS];
 
+    /**
+     * Envelopes for each operator.
+     */
     Env_Envelope opEnvelopes[FM_OPERATORS];
 } FmSynthParams;
 
@@ -202,6 +213,7 @@ static const FmSynthParams FM_DEFAULT_PARAMS = {
     }
 };
 
+/** Approximates a piano. */
 static const FmSynthParams FM_PIANO_PARAMS = {
     .sampleRate = 44100,
     .opParams = { { .waveType = WAVETYPE_SINE,
@@ -242,6 +254,7 @@ static const FmSynthParams FM_PIANO_PARAMS = {
     }
 };
 
+/** A buzzy, angry sounding voice based on saw waves. */
 static const FmSynthParams FM_SAWBLADE_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
@@ -286,6 +299,7 @@ static const FmSynthParams FM_SAWBLADE_PARAMS = {
                        .fn = PWL_ADSR_HAMMER_FUNCTION } }
 };
 
+/** A ringing bell sound. */
 static const FmSynthParams FM_BELL_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
@@ -328,6 +342,7 @@ static const FmSynthParams FM_BELL_PARAMS = {
                        .fn = PWL_BELLSTRIKE_FUNCTION } }
 };
 
+/** A sad sort of voice. */
 static const FmSynthParams FM_CRY_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
@@ -370,9 +385,9 @@ static const FmSynthParams FM_CRY_PARAMS = {
                        .fn = PWL_SWELL_FUNCTION } }
 };
 
-/**
- * @brief "Ahhhh" parameters.
- */
+/** Approximates an "ahh" vowell. Tries to emulate the first two vocal formants,
+ * however the formants move with the carrier so it sounds most convincing at
+ * low pitches (around C3). */
 static const FmSynthParams FM_AHH_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
@@ -416,6 +431,7 @@ static const FmSynthParams FM_AHH_PARAMS = {
                        .fn = PWL_CONST_FUNCTION } }
 };
 
+/** Approximates a bass guitar. */
 static const FmSynthParams FM_BASS_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
@@ -458,6 +474,7 @@ static const FmSynthParams FM_BASS_PARAMS = {
                        .fn = PWL_EXP_FALLOFF_FUNCTION } }
 };
 
+/** Approximates a brass instrument. Sounds trumpet-like. */
 static const FmSynthParams FM_BRASS_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
@@ -509,6 +526,8 @@ static const FmSynthParams FM_BRASS_PARAMS = {
                        .fn = PWL_ADSR_AHH_FUNCTION } }
 };
 
+/** Meant to have a "yoi" sound, but in practice has a buzzy and quiet
+ * electronic sort of sound. */
 static const FmSynthParams FM_YOI_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
@@ -551,6 +570,7 @@ static const FmSynthParams FM_YOI_PARAMS = {
                        .fn = PWL_EXP_FALLOFF_FUNCTION } }
 };
 
+/** A mostly inharmonic but big-sounding voice. Good as a drone! */
 static const FmSynthParams FM_BIG_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
@@ -595,6 +615,7 @@ static const FmSynthParams FM_BIG_PARAMS = {
     }
 };
 
+/** An inharmonic, glitchy, electronic sound. */
 static const FmSynthParams FM_GLITCHBOOP_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
@@ -638,6 +659,8 @@ static const FmSynthParams FM_GLITCHBOOP_PARAMS = {
 
 };
 
+/** An inharmonic "boop boop" sound reminiscent of what people though computers
+ * sounded like in the late 70's. */
 static const FmSynthParams FM_BEEPBOOP_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
@@ -681,6 +704,8 @@ static const FmSynthParams FM_BEEPBOOP_PARAMS = {
 
 };
 
+/** A big, inharmonic, "shiny" sound with several interweaving
+ * layers. Very interesting as a drone. */
 static const FmSynthParams FM_SHINYDRONE_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
@@ -724,6 +749,7 @@ static const FmSynthParams FM_SHINYDRONE_PARAMS = {
 
 };
 
+/** A happy, short, chirpy sound. */
 static const FmSynthParams FM_CHIRP_PARAMS = {
     .sampleRate = 44100,
     .opParams = { {
@@ -800,6 +826,12 @@ Fm_createFmSynthesizer(const FmSynthParams* params);
 void
 Fm_destroySynthesizer(FmSynthesizer* synth);
 
+/**
+ * Set the note currently being played.
+ *
+ * @param s Handle to a synth.
+ * @note The note to play.
+ */
 void
 Fm_setNote(FmSynthesizer* s, Note note);
 
@@ -835,6 +867,13 @@ Fm_noteOff(FmSynthesizer* synth);
 void
 Fm_updateParams(FmSynthesizer* synth, FmSynthParams* params);
 
+/**
+ * Update the parameters of a single operator.
+ *
+ * @param s Handle to a synthesizer.
+ * @op The operator to update.
+ * @params The params to apply to the operator.
+ */
 void
 Fm_updateOpParams(FmSynthesizer* s,
                   FmOperator op,
