@@ -324,14 +324,8 @@ _sampleLightLevel(void)
     if (normalized >= 1) {
         normalized = floorf(normalized);
     } else {
-        normalized *= -1;
+        normalized = -1 * (1 - normalized);
     }
-
-    // Offset so low levels are negative.
-    // TODO: Ambient levels will make this a problem. Maybe we want to
-    // only add values when they are <0.4 or >0.6? or something?
-    // This should at least be easily calibrated, possibly in the cfg file.
-    normalized -= 0.2;
 
     // Take a smoothed average
     float last = _state.sensorInputs[LIGHT_LEVEL];
@@ -556,7 +550,7 @@ Sensory_initialize(const Sensory_Preferences* prefs)
     long long currTime = Timeutils_getTimeInMs();
     while (Timeutils_getTimeInMs() < currTime + 1000) {
         unsigned int new = adc_voltage_raw(LIGHT_SENSOR_CHANNEL);
-        _ambientLightLevel = (0.9 * _ambientLightLevel) + (0.1 * new);
+        _ambientLightLevel = (0.9 * new) + (0.1 * _ambientLightLevel);
     }
 
     _state.interactionTolerance = 0;
