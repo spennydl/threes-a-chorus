@@ -1,0 +1,14 @@
+[Unit]
+Description=TAC
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=root
+WorkingDirectory=/opt/tac-service/
+ExecStartPre=sleep 10
+ExecStart=/opt/tac-service/tac 192.168.0.104
+SyslogIdentifier=TACClient
+
+[Install]
+WantedBy=multi-user.target
