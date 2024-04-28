@@ -416,9 +416,7 @@ static void
 _updateDistanceSensor(void)
 {
     double dist = INFINITY;
-    if (useUltrasonic) {
-        dist = Ultrasonic_getDistanceInCm();
-    }
+    dist = Ultrasonic_getDistanceInCm();
 
     // TODO Bit of a kludge. getDistanceInCm() should probably just
     // return zero, eh?
@@ -531,7 +529,7 @@ Sensory_initialize(const Sensory_Preferences* prefs)
         return SENSORY_EACCEL;
     }
 
-    if (useUltrasonic && !Ultrasonic_init()) {
+    if (!Ultrasonic_init()) {
         Accel_close();
         return SENSORY_EULTSON;
     }
