@@ -210,24 +210,24 @@ parseMidiFile(const char *path)
   struct stat st;
 
   if(access(path, F_OK) != 0) {
-    printf("MIDI file not found\n");
+    fprintf(stderr, "MIDI file not found\n");
     return 1;
   }
 
   if (stat(path, &st)) {
-    printf("stat(%s):\n", path);
+    fprintf(stderr, "stat(%s):\n", path);
     return 1;
   }
 
   int fd = open(path, O_RDONLY);
   if (fd < 0) {
-    printf("open(%s):\n", path);
+    fprintf(stderr, "err %d open(%s):\n", fd, path);
     return 1;
   }
 
   void *mem = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
   if (mem == MAP_FAILED) {
-    printf("mmap(%s):\n", path);
+    fprintf(stderr, "mmap fail(%s):\n", path);
     close(fd);
     return 1;
   }
@@ -342,13 +342,11 @@ midiPlayerWorker(void* p)
           currentEventNodes[i]->currentVTime = currentEventNodes[i]->vtime;
           
           if(currentEventNodes[i]->status == MIDI_STATUS_PGM_CHANGE) {
-            printf("Instrument for channel %d is now %d\n", i, currentEventNodes[i]->param1);
             instruments[i] = currentEventNodes[i]->param1;
           }
 
           for(int j = 0; j < 3; j++) {
             char buffer[MAX_LEN] = {0};
-            snprintf(buffer, MAX_LEN - 1, "%d;%d", currentEventNodes[i]->status, currentEventNodes[i]->param1);
             if(listeners[i][j] != -1) {
               int res = Tcp_sendTcpServerResponse(buffer, listeners[i][j]);
               if(res == -1) {

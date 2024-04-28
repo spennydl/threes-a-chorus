@@ -83,13 +83,13 @@ Tcp_initializeTcpServer()
 
     if(socketDescriptor < 0) 
     {
-        printf("Error creating TCP socket during initialization!\n");
+        fprintf(stderr, "Error creating TCP socket during initialization!\n");
         exit(0);
     }
 
     if(bind(socketDescriptor, (struct sockaddr*)&tcp_sin, sizeof(tcp_sin)) < 0)
     {
-        printf("Error binding to socket during TCP server initialization!\n");
+        fprintf(stderr, "Error binding to socket during TCP server initialization!\n");
         exit(0);
     }
 
@@ -201,11 +201,9 @@ tcpServerConnectionHandler(void* dataPointer)
     bzero(buffer, MAX_LEN);
     int res = recv(socketFd, buffer, MAX_LEN, 0);
     if (res < 0) {
-        printf("Error reading into buffer\n");
+        fprintf(stderr, "Error reading into buffer to send to new client\n");
         return NULL;
     }
-
-    printf("New connect said: %s\n", buffer);
 
     sendMessageToObservers(buffer, socketFd);
 
@@ -240,7 +238,7 @@ tcpServerWorker(void* p)
         socketFd = accept(socketDescriptor, (struct sockaddr*)&clientSocket, &clientLength);
 
         if (socketFd < 0) {
-            printf("Error accepting socket %d\n", socketFd);
+            fprintf(stderr, "Error accepting socket %d\n", socketFd);
             continue;
         }
 
@@ -253,7 +251,7 @@ tcpServerWorker(void* p)
         }
 
         if(connectionIndex == -1) {
-            printf("Could not find available thread for connection\n");
+            fprintf(stderr, "Could not find available thread for connection\n");
             continue;
         }
 
