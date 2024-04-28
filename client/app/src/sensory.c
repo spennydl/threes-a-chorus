@@ -33,7 +33,7 @@
 #define POTENTIOMETER_INTERACTION_THRESHOLD 10
 
 // Which channel the light sensor is on.
-#define LIGHT_SENSOR_CHANNEL ADC_CHANNEL3
+#define LIGHT_SENSOR_CHANNEL ADC_CHANNEL5
 // We quantize the light sensor readings to discrete levels. This sets
 // how many levels to quantize to
 #define LIGHT_SENSOR_LEVELS 10
@@ -346,7 +346,7 @@ _updatePotReading(void)
     // Get the pot reading and find the difference from the last.
     // This tells us how far we've been swung which correlates to how fast
     // the pot is being turned.
-    float pot = (float)adc_voltage_raw(ADC_CHANNEL1) / ADC_MAX_READING;
+    float pot = (float)adc_voltage_raw(ADC_CHANNEL3) / ADC_MAX_READING;
     float diff = fabsf(pot - last);
     diff = (diff <= 0.01) ? 0 : diff;
 
