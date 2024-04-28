@@ -1,0 +1,13 @@
+[Unit]
+Description=TAC Server
+Wants=network-online.target
+After=network-online.target
+[Service]
+User=root
+WorkingDirectory=/opt/tac-service/
+ExecStartPre=sleep 5
+ExecStart=/opt/tac-service/tac_server
+SyslogIdentifier=TACServer
+
+[Install]
+WantedBy=multi-user.target

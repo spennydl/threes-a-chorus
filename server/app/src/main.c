@@ -22,7 +22,7 @@ main()
 
     MidiPlayer_initialize();
 
-    MidiPlayer_playMidiFile("midis/zelda.mid");
+    MidiPlayer_playMidiFile("midis/overworld.mid");
 
     while (1) {
         /*char input[32];
