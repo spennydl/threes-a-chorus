@@ -347,6 +347,7 @@ midiPlayerWorker(void* p)
 
           for(int j = 0; j < 3; j++) {
             char buffer[MAX_LEN] = {0};
+            snprintf(buffer, MAX_LEN - 1, "%d;%d", currentEventNodes[i]->status, currentEventNodes[i]->param1);
             if(listeners[i][j] != -1) {
               int res = Tcp_sendTcpServerResponse(buffer, listeners[i][j]);
               if(res == -1) {
