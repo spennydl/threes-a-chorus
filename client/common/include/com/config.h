@@ -151,5 +151,3 @@ static const Sensory_Preferences sensoryPreferences = { .cAccelLow = 10,
 
 #define EMOTION_SLOW_PLAY_THRESHOLD 1
 #define EMOTION_FAST_PLAY_THRESHOLD 2
-
-static const bool useUltrasonic = true;

@@ -128,6 +128,9 @@ static pthread_t _senseThread;
 /** Should we keep sensing? */
 static int _sense = 0;
 
+/** Ambient light level determined dynamically at runtime. */
+static unsigned int _ambientLightLevel;
+
 /** Handle to the button. */
 static Button* button;
 
@@ -311,19 +314,18 @@ _updateCounter(struct IntegratingCounter* counter, int inc)
 static void
 _sampleLightLevel(void)
 {
-
     // get the sensor reading
     size_t level = adc_voltage_raw(LIGHT_SENSOR_CHANNEL);
     // quantize and normalize it
     size_t quantFactor = ADC_MAX_READING / LIGHT_SENSOR_LEVELS;
     size_t quantized = (level / quantFactor) * quantFactor;
-    float normalized = (float)quantized / ADC_MAX_READING;
+    float normalized = (float)quantized / _ambientLightLevel;
 
-    // Offset so low levels are negative.
-    // TODO: Ambient levels will make this a problem. Maybe we want to
-    // only add values when they are <0.4 or >0.6? or something?
-    // This should at least be easily calibrated, possibly in the cfg file.
-    normalized -= 0.2;
+    if (normalized >= 1) {
+        normalized = floorf(normalized);
+    } else {
+        normalized = -1 * (1 - normalized);
+    }
 
     // Take a smoothed average
     float last = _state.sensorInputs[LIGHT_LEVEL];
@@ -416,9 +418,7 @@ static void
 _updateDistanceSensor(void)
 {
     double dist = INFINITY;
-    if (useUltrasonic) {
-        dist = Ultrasonic_getDistanceInCm();
-    }
+    dist = Ultrasonic_getDistanceInCm();
 
     // TODO Bit of a kludge. getDistanceInCm() should probably just
     // return zero, eh?
@@ -531,7 +531,7 @@ Sensory_initialize(const Sensory_Preferences* prefs)
         return SENSORY_EACCEL;
     }
 
-    if (useUltrasonic && !Ultrasonic_init()) {
+    if (!Ultrasonic_init()) {
         Accel_close();
         return SENSORY_EULTSON;
     }
@@ -540,6 +540,17 @@ Sensory_initialize(const Sensory_Preferences* prefs)
         Ultrasonic_shutdown();
         Accel_close();
         return -4;
+    }
+
+    // Sample the ambient light level in the room for 1s using exponential
+    // smoothing. This value, _ambientLightLevel, will be saved and used as a
+    // baseline for future photoresistor calculations.
+    _ambientLightLevel = adc_voltage_raw(LIGHT_SENSOR_CHANNEL);
+
+    long long currTime = Timeutils_getTimeInMs();
+    while (Timeutils_getTimeInMs() < currTime + 1000) {
+        unsigned int new = adc_voltage_raw(LIGHT_SENSOR_CHANNEL);
+        _ambientLightLevel = (0.9 * new) + (0.1 * _ambientLightLevel);
     }
 
     _state.interactionTolerance = 0;
