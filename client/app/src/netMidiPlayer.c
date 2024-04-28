@@ -132,8 +132,6 @@ _playNetMidi(void* _unused)
             continue;
         }
 
-        printf("%s\n", requestBuf);
-
         MidiEvent event = _deserializeMidiEvent(requestBuf);
 
         if (event.type == MIDI_STATUS_NOTE_ON) {

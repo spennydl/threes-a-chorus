@@ -111,11 +111,11 @@ Ultrasonic_init(void)
     gpio_set_active_low(&echoPin, false);
 
     if (gpio_open(&triggerPin) < 0) {
-        printf("can't init trig\n");
+        fprintf(stderr, "can't init trig\n");
     }
 
     if (gpio_write(&triggerPin, 0) < 0) {
-        printf("can't write trig\n");
+        fprintf(stderr, "can't write trig\n");
     }
 
     lastReadDistance = INFINITY;
