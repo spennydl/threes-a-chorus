@@ -22,10 +22,10 @@ main()
 
     MidiPlayer_initialize();
 
-    MidiPlayer_playMidiFile("overworld.mid");
+    MidiPlayer_playMidiFile("midis/overworld.mid");
 
     while (1) {
-        char input[32];
+        /*char input[32];
         printf("Enter exit to quit, file name, orcd  a number for bpm: ");
         scanf("%s", input);
 
@@ -46,7 +46,7 @@ main()
         else {
             printf("Switching to MIDI file: %s\n", input);
             MidiPlayer_playMidiFile(input);
-        }
+        }*/
     }
 
     printf("Shutting down!\n");
