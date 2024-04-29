@@ -1,18 +1,18 @@
+#include <arpa/inet.h>
+#include <assert.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <stdatomic.h>
 #include <stdbool.h>
-#include <sys/socket.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <arpa/inet.h>
-#include <pthread.h>
-#include <unistd.h>
 #include <string.h>
-#include <assert.h>
-#include <stdatomic.h>
-#include <stdint.h>
-#include <sys/stat.h>
 #include <sys/sendfile.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
-#include <fcntl.h>
+#include <unistd.h>
 
 #include "tcp.h"
 
@@ -37,7 +37,7 @@ static int socketDescriptor;
 pthread_t tcpServerThreadId;
 static atomic_bool tcpServerRunning = true;
 
-bool connectionActive[MAX_CONNECTIONS] = {0};
+bool connectionActive[MAX_CONNECTIONS] = { 0 };
 pthread_t connectionThreads[MAX_CONNECTIONS];
 
 static void
@@ -45,8 +45,7 @@ sendMessageToObservers(char* message, int socketFd)
 {
     struct ListNode* node = head;
 
-    while(node != NULL)
-    {
+    while (node != NULL) {
         TcpObserver* observer = &node->item;
         observer->notification(observer->instance, message, socketFd);
         node = node->next;
@@ -56,8 +55,7 @@ sendMessageToObservers(char* message, int socketFd)
 static void
 freeObserver(struct ListNode* observer)
 {
-    if (observer == NULL)
-    {
+    if (observer == NULL) {
         return;
     }
 
@@ -71,7 +69,7 @@ freeObservers()
     freeObserver(head);
 }
 
-void
+Server_Status
 Tcp_initializeTcpServer()
 {
     memset(&tcp_sin, 0, sizeof(tcp_sin));
@@ -81,28 +79,37 @@ Tcp_initializeTcpServer()
 
     socketDescriptor = socket(AF_INET, SOCK_STREAM, 0);
 
-    if(socketDescriptor < 0) 
-    {
+    if (socketDescriptor < 0) {
         fprintf(stderr, "Error creating TCP socket during initialization!\n");
-        exit(0);
+        return SERVER_ERROR;
     }
 
-    if(bind(socketDescriptor, (struct sockaddr*)&tcp_sin, sizeof(tcp_sin)) < 0)
-    {
-        fprintf(stderr, "Error binding to socket during TCP server initialization!\n");
-        exit(0);
+    if (bind(socketDescriptor, (struct sockaddr*)&tcp_sin, sizeof(tcp_sin)) <
+        0) {
+        fprintf(stderr,
+                "Error binding to socket during TCP server initialization!\n");
+        return SERVER_ERROR;
     }
 
-    listen(socketDescriptor, 5);
+    if (listen(socketDescriptor, 5) < 0) {
+        fprintf(stderr,
+                "Error listening to socket during server initialization!\n");
+        return SERVER_ERROR;
+    }
 
-    pthread_create(&tcpServerThreadId, NULL, tcpServerWorker, NULL);
+    if (pthread_create(&tcpServerThreadId, NULL, tcpServerWorker, NULL) != 0) {
+        fprintf(stderr, "Error creating thread during server initialization!");
+        return SERVER_ERROR;
+    }
+
+    return SERVER_OK;
 }
 
 void
 Tcp_cleanUpTcpServer()
 {
     tcpServerRunning = false;
-    
+
     shutdown(socketDescriptor, SHUT_RDWR);
     pthread_join(tcpServerThreadId, NULL);
 
@@ -112,7 +119,7 @@ Tcp_cleanUpTcpServer()
 ssize_t
 Tcp_sendTcpServerResponse(const char* message, int socketFd)
 {
-    char msg[MAX_LEN] = {0};
+    char msg[MAX_LEN] = { 0 };
     strncpy(msg, message, strlen(message));
     return send(socketFd, msg, MAX_LEN, MSG_NOSIGNAL);
 }
@@ -124,20 +131,20 @@ Tcp_sendFile(char* path, int socketFd)
     struct stat fileStat;
     char fileSize[MAX_LEN];
 
-    if(fd == -1) {
+    if (fd == -1) {
         char error[512];
         snprintf(error, 512, "Could not open '%s' to send!", path);
         perror(error);
         return fd;
     }
 
-    if(fstat(fd, &fileStat) < 0) {
+    if (fstat(fd, &fileStat) < 0) {
         perror("Error getting file stat for file to send!");
         return 0;
     }
 
     snprintf(fileSize, MAX_LEN, "%ld", fileStat.st_size);
-    
+
     // First send file size
     Tcp_sendTcpServerResponse(fileSize, socketFd);
 
@@ -145,10 +152,13 @@ Tcp_sendFile(char* path, int socketFd)
     int remainingData = fileStat.st_size;
     int sentBytes = -1;
 
-    while(remainingData > 0) {
-        sentBytes = sendfile(socketFd, fd, &offset, remainingData < BUFSIZ ? remainingData : BUFSIZ);
+    while (remainingData > 0) {
+        sentBytes = sendfile(socketFd,
+                             fd,
+                             &offset,
+                             remainingData < BUFSIZ ? remainingData : BUFSIZ);
 
-        if(sentBytes <= 0) {
+        if (sentBytes <= 0) {
             perror("Error while sending file");
             break;
         }
@@ -166,9 +176,9 @@ Tcp_attachToTcpServer(const TcpObserver* observer)
 {
     assert(observer != NULL);
 
-    if (head == NULL)
-    {
-        struct ListNode* newNode = (struct ListNode*)malloc(sizeof(struct ListNode));
+    if (head == NULL) {
+        struct ListNode* newNode =
+          (struct ListNode*)malloc(sizeof(struct ListNode));
         newNode->item = *observer;
         newNode->next = NULL;
         head = newNode;
@@ -177,12 +187,12 @@ Tcp_attachToTcpServer(const TcpObserver* observer)
 
     struct ListNode* node = head;
 
-    while (node->next != NULL)
-    {
+    while (node->next != NULL) {
         node = node->next;
     }
 
-    struct ListNode* newNode = (struct ListNode*)malloc(sizeof(struct ListNode));
+    struct ListNode* newNode =
+      (struct ListNode*)malloc(sizeof(struct ListNode));
     newNode->item = *observer;
     newNode->next = NULL;
     node->next = newNode;
@@ -207,12 +217,12 @@ tcpServerConnectionHandler(void* dataPointer)
 
     sendMessageToObservers(buffer, socketFd);
 
-    while(tcpServerRunning && connectionOpen) {
+    while (tcpServerRunning && connectionOpen) {
         int error;
         socklen_t len = sizeof(error);
         int ret = getsockopt(socketFd, SOL_SOCKET, SO_ERROR, &error, &len);
 
-        if(ret != 0 || error != 0) {
+        if (ret != 0 || error != 0) {
             connectionOpen = false;
         }
     }
@@ -235,7 +245,8 @@ tcpServerWorker(void* p)
 
     while (tcpServerRunning) {
 
-        socketFd = accept(socketDescriptor, (struct sockaddr*)&clientSocket, &clientLength);
+        socketFd = accept(
+          socketDescriptor, (struct sockaddr*)&clientSocket, &clientLength);
 
         if (socketFd < 0) {
             fprintf(stderr, "Error accepting socket %d\n", socketFd);
@@ -243,14 +254,14 @@ tcpServerWorker(void* p)
         }
 
         int connectionIndex = -1;
-        for(int i = 0; i < MAX_CONNECTIONS; i++) {
-            if(!connectionActive[i]) {
+        for (int i = 0; i < MAX_CONNECTIONS; i++) {
+            if (!connectionActive[i]) {
                 connectionIndex = i;
                 break;
             }
         }
 
-        if(connectionIndex == -1) {
+        if (connectionIndex == -1) {
             fprintf(stderr, "Could not find available thread for connection\n");
             continue;
         }
@@ -259,7 +270,10 @@ tcpServerWorker(void* p)
         data.connectionIndex = connectionIndex;
         data.socketFd = socketFd;
 
-        pthread_create(&connectionThreads[connectionIndex], NULL, tcpServerConnectionHandler, (void*)&data);
+        pthread_create(&connectionThreads[connectionIndex],
+                       NULL,
+                       tcpServerConnectionHandler,
+                       (void*)&data);
         pthread_detach(connectionThreads[connectionIndex]);
     }
 
