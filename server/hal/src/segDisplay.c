@@ -4,8 +4,8 @@
 #define GPIO_DIR_RIGHT "/sys/class/gpio/gpio44/value"
 
 // Error number patterns (00 and 33 respectively)
-static const uint8_t okPattern[4] = { 0xA1, 0x86, 0xA1, 0x86 };
-static const uint8_t errorPattern[4] = { 0xB0, 0X0E, 0XB0, 0X0E };
+static const uint8_t okPattern[4] = {  0x86, 0xA1, 0x86, 0xA1 };
+static const uint8_t errorPattern[4] = { 0X0E, 0xB0, 0X0E, 0xB0, };
 
 // Admin vars
 static I2C_BusHandle i2c;

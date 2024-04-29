@@ -20,6 +20,8 @@ main()
 {
     srand(time(NULL));
 
+    SegDisplay_init();
+
     if (Tcp_initializeTcpServer() != SERVER_OK) {
         SegDisplay_displayStatus(SERVER_ERROR);
         exit(SERVER_ERROR);
