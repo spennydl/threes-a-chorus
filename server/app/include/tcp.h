@@ -6,6 +6,8 @@
  */
 #pragma once
 
+#include <sys/types.h>
+
 #define MAX_LEN 1024
 #define PORT 12345
 #define EXIT_CODE "TIMETOGOBYE"

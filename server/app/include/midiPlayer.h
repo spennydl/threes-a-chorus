@@ -1,4 +1,5 @@
 #pragma once
+#include "tcp.h"
 
 /**
  * Init all threads
