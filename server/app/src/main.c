@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <time.h>
 
+#include "hal/segDisplay.h"
+
 #include "midiPlayer.h"
 #include "tcp.h"
 
@@ -18,11 +20,25 @@ main()
 {
     srand(time(NULL));
 
-    Tcp_initializeTcpServer();
+    SegDisplay_init();
 
-    MidiPlayer_initialize();
+    if (Tcp_initializeTcpServer() != SERVER_OK) {
+        SegDisplay_displayStatus(SERVER_ERROR);
+        exit(SERVER_ERROR);
+    }
 
-    MidiPlayer_playMidiFile("midis/overworld.mid");
+    if (MidiPlayer_initialize() != SERVER_OK) {
+        SegDisplay_displayStatus(SERVER_ERROR);
+        exit(SERVER_ERROR);
+    }
+
+    if (MidiPlayer_playMidiFile("midis/overworld.mid") != SERVER_OK) {
+        SegDisplay_displayStatus(SERVER_ERROR);
+        exit(SERVER_ERROR);
+    }
+
+    // If server starts successfully, display success code on seg display.
+    SegDisplay_displayStatus(SERVER_OK);
 
     while (1) {
         /*char input[32];
