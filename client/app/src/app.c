@@ -31,7 +31,7 @@ static bool
 _runMidiPlayer(int channel, char* ip);
 
 static void
-_handle_sigint(int sig);
+_handleSigint(int sig);
 
 static bool
 _runMidiPlayer(int channel, char* ip)
