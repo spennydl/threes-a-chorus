@@ -35,20 +35,21 @@ static void
 error(char* message)
 {
     perror(message);
-    exit(0);
 }
 
-void
+int
 Tcp_initializeTcpClient(const char* hostname)
 {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         error("TCP client could not open socket!\n");
+        return -1;
     }
 
     server = gethostbyname(hostname);
     if (server == NULL) {
         error("Host does not exist!\n");
+        return -1;
     }
 
     bzero((char*)&serverAddress, sizeof(serverAddress));
@@ -65,8 +66,10 @@ Tcp_initializeTcpClient(const char* hostname)
 
     if (connect(sockfd, (struct sockaddr*)&serverAddress, serverlen) != 0) {
         error("Error connecting to TCP server!\n");
-        return;
+        return -1;
     }
+
+    return 1;
 }
 
 void

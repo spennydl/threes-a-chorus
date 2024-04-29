@@ -154,7 +154,9 @@ _playNetMidi(void* _unused)
 int
 NetMidi_openMidiChannel(const char* hostname, NetMidi_Channel channel)
 {
-    Tcp_initializeTcpClient(hostname);
+    if(Tcp_initializeTcpClient(hostname) == -1) {
+        return -1;
+    }
 
     char buf[MAX_BUFFER_SIZE];
     snprintf(buf, MAX_BUFFER_SIZE, SUBSCRIBE_TO_CHANNEL_MESSAGE_FMT, channel);
