@@ -18,7 +18,7 @@
  * Initialize TCP client from hostname
  * @param hostname Name of the host
  */
-void
+int
 Tcp_initializeTcpClient(const char* hostname);
 
 /**
