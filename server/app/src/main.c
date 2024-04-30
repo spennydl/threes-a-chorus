@@ -1,73 +1,84 @@
 // Main program to build the application
 // Has main(); does initialization and cleanup and perhaps some basic logic.
 
-#include <arpa/inet.h>
-#include <ctype.h>
-#include <stdbool.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <time.h>
 
 #include "hal/segDisplay.h"
-
+#include "hal/timeutils.h"
 #include "midiPlayer.h"
 #include "tcp.h"
+
+static sig_atomic_t sigintRecvd = 0;
+
+static int
+_installSigintHandler(void);
+static void
+_handleSigint(int sig);
+
+static int
+_installSigintHandler(void)
+{
+    struct sigaction sigact;
+    sigact.sa_flags = SA_RESTART;
+    sigemptyset(&sigact.sa_mask);
+    sigaddset(&sigact.sa_mask, SIGINT);
+    sigact.sa_handler = _handleSigint;
+
+    return sigaction(SIGINT, &sigact, NULL);
+}
+
+static void
+_handleSigint(int _sig)
+{
+    (void)_sig;
+    sigintRecvd = 1;
+}
 
 int
 main()
 {
+    if (_installSigintHandler() < 0) {
+        fprintf(stderr,
+                "WARN: Could not install sigint handler. The server will not "
+                "shut down gracefully\n");
+        perror("sigint handler");
+    }
+
     srand(time(NULL));
 
     SegDisplay_init();
 
     if (Tcp_initializeTcpServer() != SERVER_OK) {
+        perror("Could not intitialize");
         SegDisplay_displayStatus(SERVER_ERROR);
         exit(SERVER_ERROR);
     }
 
     if (MidiPlayer_initialize() != SERVER_OK) {
         SegDisplay_displayStatus(SERVER_ERROR);
+        perror("Could not start the midi player");
+        Tcp_cleanUpTcpServer();
         exit(SERVER_ERROR);
     }
 
     if (MidiPlayer_playMidiFile("midis/overworld.mid") != SERVER_OK) {
         SegDisplay_displayStatus(SERVER_ERROR);
+        perror("Could not play overworld.mid");
+        MidiPlayer_cleanup();
+        Tcp_cleanUpTcpServer();
         exit(SERVER_ERROR);
     }
 
     // If server starts successfully, display success code on seg display.
     SegDisplay_displayStatus(SERVER_OK);
 
-    while (1) {
-        /*char input[32];
-        printf("Enter exit to quit, file name, orcd  a number for bpm: ");
-        scanf("%s", input);
-
-        if(strcmp(input, "exit") == 0) {
-            break;
-        }
-        else if(strcmp(input, "shuffle") == 0) {
-            char shuffledFile[256];
-            MidiPlayer_getRandomMidiPath(shuffledFile);
-            printf("Shuffled to MIDI file: %s\n", shuffledFile);
-            MidiPlayer_playMidiFile(shuffledFile);
-        }
-        else if(isdigit(input[0]) || (input[0] == '\n' && isdigit(input[1]))) {
-            int newBpm = atoi(input);
-            MidiPlayer_setBpm(newBpm);
-            printf("Set BPM to %d\n", newBpm);
-        }
-        else {
-            printf("Switching to MIDI file: %s\n", input);
-            MidiPlayer_playMidiFile(input);
-        }*/
+    while (sigintRecvd == 0) {
+        Timeutils_sleepForMs(500);
     }
 
-    printf("Shutting down!\n");
-
     MidiPlayer_cleanup();
-
     Tcp_cleanUpTcpServer();
+    SegDisplay_shutdown();
 }
