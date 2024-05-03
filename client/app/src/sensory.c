@@ -129,7 +129,9 @@ static pthread_t _senseThread;
 static int _sense = 0;
 
 /** Ambient light level determined dynamically at runtime. */
-static unsigned int _ambientLightLevel;
+static Pwl_Function _lightCurve = { .ptsX = { 0.0, 0.5, 1.0 },
+                                    .ptsY = { -1.0, 0.0, 1.0 },
+                                    .pts = 3 };
 
 /** Handle to the button. */
 static Button* button;
@@ -151,7 +153,7 @@ static struct TristateIntegrator _buttonStateIntegrator = {
 /** Determines light level state. */
 static struct TristateIntegrator _lightLevelTsInt = {
 
-    .stateThresholds = { 0.0, 0.1, 0.2 },
+    .stateThresholds = { 0.0, 0.1, 0.4 },
     .countThresholds = { 3, 3, 3 },
 };
 
@@ -315,17 +317,9 @@ static void
 _sampleLightLevel(void)
 {
     // get the sensor reading
-    size_t level = adc_voltage_raw(LIGHT_SENSOR_CHANNEL);
-    // quantize and normalize it
-    size_t quantFactor = ADC_MAX_READING / LIGHT_SENSOR_LEVELS;
-    size_t quantized = (level / quantFactor) * quantFactor;
-    float normalized = (float)quantized / _ambientLightLevel;
-
-    if (normalized >= 1) {
-        normalized = floorf(normalized);
-    } else {
-        normalized = -1 * (1 - normalized);
-    }
+    float normedLevel =
+      (float)adc_voltage_raw(LIGHT_SENSOR_CHANNEL) / ADC_MAX_READING;
+    float normalized = Pwl_sample(&_lightCurve, normedLevel);
 
     // Take a smoothed average
     float last = _state.sensorInputs[LIGHT_LEVEL];
@@ -545,13 +539,19 @@ Sensory_initialize(const Sensory_Preferences* prefs)
     // Sample the ambient light level in the room for 1s using exponential
     // smoothing. This value, _ambientLightLevel, will be saved and used as a
     // baseline for future photoresistor calculations.
-    _ambientLightLevel = adc_voltage_raw(LIGHT_SENSOR_CHANNEL);
+    float ambientLightLevel = adc_voltage_raw(LIGHT_SENSOR_CHANNEL);
 
     long long currTime = Timeutils_getTimeInMs();
     while (Timeutils_getTimeInMs() < currTime + 1000) {
-        unsigned int new = adc_voltage_raw(LIGHT_SENSOR_CHANNEL);
-        _ambientLightLevel = (0.9 * new) + (0.1 * _ambientLightLevel);
+        float new = adc_voltage_raw(LIGHT_SENSOR_CHANNEL);
+        ambientLightLevel = (0.9 * new) + (0.1 * ambientLightLevel);
     }
+    float lightCurveMidpoint = (float)ambientLightLevel / ADC_MAX_READING;
+    fprintf(stderr,
+            "found ambient level at %f which gives midpoint of %f\n",
+            ambientLightLevel,
+            lightCurveMidpoint);
+    _lightCurve.ptsX[1] = lightCurveMidpoint;
 
     _state.interactionTolerance = 0;
     _state.sensoryIndex = 0;
