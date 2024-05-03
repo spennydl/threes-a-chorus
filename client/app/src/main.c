@@ -31,6 +31,6 @@ main(int argc, char** argv)
     Singer_shutdown();
     Rfid_shutdown();
 
-    printf("\n");
+    fprintf(stderr, "Singer shut down successfully\n");
     return 0;
 }
