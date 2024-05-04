@@ -37,7 +37,7 @@ static bool
 _runMidiPlayer(int channel, char* ip)
 {
     if (NetMidi_openMidiChannel(ip, channel) < 0) {
-        printf("Error: Could not open midi channel\n");
+        fprintf(stderr, "Error: Could not open midi channel\n");
         return false;
     }
 
@@ -93,16 +93,16 @@ App_runApp(char* serverIp)
         if (onRfid) {
             if (!midiPlayerIsRunning) {
                 Singer_rest();
-                printf("Found tag. Id is %d -> %d\n",
-                       currentTagId,
-                       currentTagId % 16);
+                fprintf(stderr,
+                        "Singer found tag with ID %d -> %d\n",
+                        currentTagId,
+                        currentTagId % 16);
                 midiPlayerIsRunning =
                   _runMidiPlayer(currentTagId % 16, serverIp);
-                
-                if(midiPlayerIsRunning) {
+
+                if (midiPlayerIsRunning) {
                     SegDisplay_setIsSinging(true);
-                }  
-                else {
+                } else {
                     Singer_sing();
                 }
             }

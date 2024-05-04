@@ -145,14 +145,7 @@ Tcp_requestFile(char* fileName)
         fwrite(buffer, sizeof(char), len, receivedFile);
 
         remainingData -= len;
-#ifdef DEV
-        printf("%d bytes got so %d bytes left\n", len, remainingData);
-#endif
     }
-
-#ifdef DEV
-    printf("done!\n");
-#endif
 
     fclose(receivedFile);
     pthread_mutex_unlock(&tcpLock);

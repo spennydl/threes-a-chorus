@@ -4,7 +4,6 @@
  * @author Spencer Leslie 301571329
  */
 #include "sensory.h"
-#include "com/config.h"
 #include "com/pwl.h"
 #include "com/timeutils.h"
 #include "hal/accel.h"
@@ -159,7 +158,7 @@ static struct TristateIntegrator _lightLevelTsInt = {
 
 /** Determines accelerometer input state. */
 static struct TristateIntegrator _accelTsInt = {
-    .stateThresholds = { 0.0, 0.001, CUBE_ROOT_0_25 },
+    .stateThresholds = { 0.0, 0.19, CUBE_ROOT_0_25 },
     .countThresholds = { 10, 7, 3 },
 };
 
@@ -381,10 +380,10 @@ _updateAccelerometer(void)
     // to compensate each differently? or enable a filter?
     // Either way it would be better if this offset constant could be a
     // calibration parameter in the cfg file.
-    float mag = sqrtf(x2 + y2 + z2) - 0.505;
+    float rawmag = sqrtf(x2 + y2 + z2) - 0.505;
 
     // take abs - we don't care about direction
-    mag = fabsf(mag);
+    rawmag = fabsf(rawmag);
 
     // Take the cube root. Small changes will make big differences when being
     // handled gently, and small changes will make small differences when we're
@@ -393,7 +392,7 @@ _updateAccelerometer(void)
     // others. We skipped doing that with the others since it didn't make a lot
     // of sense to for some and others (like the light sensor) are already
     // non-linear.
-    mag = cbrt((mag < 0.005) ? 0 : mag);
+    float mag = cbrt((rawmag < 0.005) ? 0 : rawmag);
 
     // integrate and update state.
     _integrateTristate(&_accelTsInt, mag);
@@ -547,11 +546,13 @@ Sensory_initialize(const Sensory_Preferences* prefs)
         ambientLightLevel = (0.9 * new) + (0.1 * ambientLightLevel);
     }
     float lightCurveMidpoint = (float)ambientLightLevel / ADC_MAX_READING;
-    fprintf(stderr,
-            "found ambient level at %f which gives midpoint of %f\n",
-            ambientLightLevel,
-            lightCurveMidpoint);
+
     _lightCurve.ptsX[1] = lightCurveMidpoint;
+    fprintf(
+      stderr,
+      "Autoleveling found ambient level at %f which gives midpoint of %f\n",
+      ambientLightLevel,
+      lightCurveMidpoint);
 
     _state.interactionTolerance = 0;
     _state.sensoryIndex = 0;

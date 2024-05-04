@@ -14,7 +14,7 @@ int
 main(int argc, char** argv)
 {
     if (argc < 2) {
-        printf("You must specify the server ip (192.168.7.1)");
+        fprintf(stderr, "You must specify the server ip (192.168.7.1)\n");
         return 0;
     }
 
