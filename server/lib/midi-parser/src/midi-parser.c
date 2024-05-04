@@ -1,7 +1,7 @@
 ﻿#include <assert.h>
 #include <math.h>
 
-#include "lib/midi-parser.h"
+#include "midi-parser.h"
 
 const char *
 midi_file_format_name(int fmt)

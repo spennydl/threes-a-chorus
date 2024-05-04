@@ -7,6 +7,14 @@
 
 typedef int NetMidi_Channel;
 
+typedef enum
+{
+    MIDIEVENT_NOTE_OFF = 0x8,
+    MIDIEVENT_NOTE_ON = 0x9,
+    MIDIEVENT_PGM_CHANGE = 0xC,
+
+} NetMidi_MidiEvent;
+
 /**
  * Send a file response to a message from socketFd
  * @param hostname The ip of the server
