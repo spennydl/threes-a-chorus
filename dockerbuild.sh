@@ -5,6 +5,7 @@ set -ex
 imagename="armbuild"
 build=
 tag=latest
+deployPath="$HOME/cmpt433/public/myApps"
 
 if [[ $# -gt 0 ]]; then
     while (( $# )); do
@@ -20,6 +21,10 @@ if [[ $# -gt 0 ]]; then
             "--build")
                 build=1
             ;;
+            "--deploy-to")
+                shift
+                deployPath="$1"
+            ;;
             *)
                 echo "Error: invalid switch $1"
                 exit 1
@@ -29,12 +34,12 @@ if [[ $# -gt 0 ]]; then
 fi
 
 if [[ $build ]]; then
-    docker build -t "$imagename":"$tag" ./buildenv
+    docker build -t "$imagename":"$tag" "$(dirname "$0")/env/docker"
 fi
 
 docker run -t \
     -v .:/srcdir \
-    -v /home/spennydl/beaglebone:/cmpt433/public/myApps \
+    -v "$deployPath":/cmpt433/public/myApps \
     --rm \
     -u "$UID:$GID" \
     "$imagename":"$tag" \

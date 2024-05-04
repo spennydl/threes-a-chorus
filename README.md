@@ -1,6 +1,4 @@
 # CMPT433 Project - Three's a Chorus
 
-This repository serves as a workspace for all things related to our CMPT433
-project. It also hosts a wiki where we can aggregate resources and write
-documentation for the project.
-
+Three’s a Chorus is an interactive demo created and built by Louie Lu
+(louie_lu@sfu.ca), Jet Simon (jets@sfu.ca), and Spencer Leslie (sla489@sfu.ca).
