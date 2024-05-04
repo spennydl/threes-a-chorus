@@ -14,6 +14,16 @@ If compiling directly on the host you should have:
 If cross-compiling using Docker, you can use any host OS and you only need
 Docker installed.
 
+### Choose a configuration to build
+
+Each of the three singers has different configuration that determines their
+personality and sets required constants for hardware access. The configuration
+is defined in header files in the `client/common` library. Changing
+configuration currently requires a rebuild.
+
+Before compiling the project, edit `client/common/include/com/config.h` and
+include the configuration for the singer you are targeting.
+
 ## Build with CMake
 
 Both the client and server can be built with CMake.
