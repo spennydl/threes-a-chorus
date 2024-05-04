@@ -1,3 +1,7 @@
+/**
+ * @file config.h
+ * @brief Configures hardware access and personality.
+ */
 #pragma once
 
 /**
