@@ -15,7 +15,6 @@ add_compile_options(-fdiagnostics-color)
 # add_compile_options(-fsanitize=address) add_link_options(-fsanitize=address)
 
 # What folders to build
-add_subdirectory(lib)
 add_subdirectory(common)
 add_subdirectory(hal)
 add_subdirectory(das)

@@ -15,7 +15,6 @@ set_target_properties(
 target_link_libraries(
   tac
   LINK_PRIVATE
-  lib
   hal
   das
   com

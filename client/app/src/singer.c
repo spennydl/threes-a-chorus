@@ -13,6 +13,8 @@
 #include "singer.h"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /** Max length of the report written to stdout */
 #define MAX_REPORT_SIZE 1024
@@ -42,8 +44,11 @@
 #define HYPERBOLA_I(x) ((IDLE_HYPERBOLA_NUMERATOR) / (x))
 #define HYPERBOLA_II(x) ((-IDLE_HYPERBOLA_NUMERATOR) / (x))
 
+#define TAC_ENABLE_PRINT_ENV "TAC_ENABLE_PRINT"
+
 /** Buffer for the report printed to stdout. */
 static char report[MAX_REPORT_SIZE];
+static bool _shouldPrintReport = false;
 
 /** Singer's current mood. */
 static Mood mood = {
@@ -102,8 +107,7 @@ _printSensoryReport(Sensory_State* state)
       state->sensoryIndex,
       state->sensoryTolerance);
 
-    printf("%s", "\033[K\r");
-    printf("%s", report);
+    printf("%s\n", report);
 }
 
 static void
@@ -326,6 +330,11 @@ Singer_initialize(void)
         return -1;
     }
 
+    const char* enablePrintEnv = getenv(TAC_ENABLE_PRINT_ENV);
+    if (enablePrintEnv != NULL && strncmp("yes", enablePrintEnv, 3) == 0) {
+        _shouldPrintReport = true;
+    }
+
     Sensory_beginSensing();
 
     return 0;
@@ -369,7 +378,9 @@ Singer_update(void)
     Sensory_reportSensoryState(&state);
     _updateMood(&state);
 
-    _printSensoryReport(&state);
+    if (_shouldPrintReport) {
+        _printSensoryReport(&state);
+    }
 
     return 0;
 }

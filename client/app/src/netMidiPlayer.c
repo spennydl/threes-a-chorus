@@ -7,7 +7,6 @@
 
 #include "das/fmplayer.h"
 #include "hal/tcp.h"
-#include "lib/midi-parser.h"
 #include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -134,12 +133,12 @@ _playNetMidi(void* _unused)
 
         MidiEvent event = _deserializeMidiEvent(requestBuf);
 
-        if (event.type == MIDI_STATUS_NOTE_ON) {
+        if (event.type == MIDIEVENT_NOTE_ON) {
             FmPlayer_setNote(event.eventData - 36);
             FmPlayer_controlNote(NOTE_CTRL_NOTE_ON);
-        } else if (event.type == MIDI_STATUS_NOTE_OFF) {
+        } else if (event.type == MIDIEVENT_NOTE_OFF) {
             FmPlayer_controlNote(NOTE_CTRL_NOTE_OFF);
-        } else if (event.type == MIDI_STATUS_PGM_CHANGE) {
+        } else if (event.type == MIDIEVENT_PGM_CHANGE) {
             _setInstrumentFromMidiCode(event.eventData);
         } else {
             fprintf(
@@ -154,7 +153,7 @@ _playNetMidi(void* _unused)
 int
 NetMidi_openMidiChannel(const char* hostname, NetMidi_Channel channel)
 {
-    if(Tcp_initializeTcpClient(hostname) == -1) {
+    if (Tcp_initializeTcpClient(hostname) == -1) {
         return -1;
     }
 

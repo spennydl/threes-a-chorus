@@ -1,5 +1,4 @@
 #include <dirent.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
@@ -12,7 +11,7 @@
 #include <unistd.h>
 
 #include "hal/timeutils.h"
-#include "lib/midi-parser.h"
+#include "midi-parser.h"
 #include "midiPlayer.h"
 #include "tcp.h"
 
