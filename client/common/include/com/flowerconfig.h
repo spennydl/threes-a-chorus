@@ -42,24 +42,6 @@
 // static const uint8_t BLINK_SINGING[4] = { 0x81, 0x50, 0x81, 0x50 };
 //
 /* ********************************************
- Uncomment the following for Zen Cape GREEN *
- ******************************************/
-
-// /////////////// accel.c ////////////////////////
-#define ACCEL_ADDR 0x1C
-#define ACCEL_ACTIVE_MODE 0x01
-#define ACCEL_CTRL_REG1 0x2A
-#define ACCEL_DATA_READ 0x01
-#define ACCEL_NUM_BYTES_TO_READ 7
-#define ACCEL_INDEX_ADJUST 2
-///////////////// segDisplay.c  /////////////////////
-#define SEGDISPLAY_I2C_ADDRESS 0x20
-#define SEGDISPLAY_DIRA_REG 0x00
-#define SEGDISPLAY_DIRB_REG 0x01
-#define SEGDISPLAY_OUTA_REG 0x14
-#define SEGDISPLAY_OUTB_REG 0x15
-
-/* ********************************************
 Uncomment the following for Zen Cape GREEN *
  ****************************************/
 
@@ -141,7 +123,7 @@ static const Sensory_Preferences sensoryPreferences = { .cAccelLow = 5,
                                                         .toleranceFunction =
                                                           TOLERANCE_FUNCTION };
 
-#define IDLE_HYPERBOLA_NUMERATOR 50.0
+#define IDLE_HYPERBOLA_NUMERATOR 5.0
 
 #define EMOTION_SLOW_PLAY_THRESHOLD 0
 #define EMOTION_FAST_PLAY_THRESHOLD 0
