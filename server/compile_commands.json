@@ -1,0 +1,50 @@
+[
+{
+  "directory": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/build/hal",
+  "command": "/usr/bin/cc  -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/hal/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/include -std=gnu11 -Wall -Werror -Wpedantic -Wextra -fdiagnostics-color -o CMakeFiles/hal.dir/src/fileio.c.o -c /home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/src/fileio.c",
+  "file": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/src/fileio.c",
+  "output": "hal/CMakeFiles/hal.dir/src/fileio.c.o"
+},
+{
+  "directory": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/build/hal",
+  "command": "/usr/bin/cc  -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/hal/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/include -std=gnu11 -Wall -Werror -Wpedantic -Wextra -fdiagnostics-color -o CMakeFiles/hal.dir/src/i2c.c.o -c /home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/src/i2c.c",
+  "file": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/src/i2c.c",
+  "output": "hal/CMakeFiles/hal.dir/src/i2c.c.o"
+},
+{
+  "directory": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/build/hal",
+  "command": "/usr/bin/cc  -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/hal/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/include -std=gnu11 -Wall -Werror -Wpedantic -Wextra -fdiagnostics-color -o CMakeFiles/hal.dir/src/segDisplay.c.o -c /home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/src/segDisplay.c",
+  "file": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/src/segDisplay.c",
+  "output": "hal/CMakeFiles/hal.dir/src/segDisplay.c.o"
+},
+{
+  "directory": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/build/hal",
+  "command": "/usr/bin/cc  -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/hal/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/include -std=gnu11 -Wall -Werror -Wpedantic -Wextra -fdiagnostics-color -o CMakeFiles/hal.dir/src/timeutils.c.o -c /home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/src/timeutils.c",
+  "file": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/src/timeutils.c",
+  "output": "hal/CMakeFiles/hal.dir/src/timeutils.c.o"
+},
+{
+  "directory": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/build/app",
+  "command": "/usr/bin/cc  -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/lib/midi-parser/include -std=gnu11 -Wall -Werror -Wpedantic -Wextra -fdiagnostics-color -o CMakeFiles/tac_server.dir/src/main.c.o -c /home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/src/main.c",
+  "file": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/src/main.c",
+  "output": "app/CMakeFiles/tac_server.dir/src/main.c.o"
+},
+{
+  "directory": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/build/app",
+  "command": "/usr/bin/cc  -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/lib/midi-parser/include -std=gnu11 -Wall -Werror -Wpedantic -Wextra -fdiagnostics-color -o CMakeFiles/tac_server.dir/src/midiPlayer.c.o -c /home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/src/midiPlayer.c",
+  "file": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/src/midiPlayer.c",
+  "output": "app/CMakeFiles/tac_server.dir/src/midiPlayer.c.o"
+},
+{
+  "directory": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/build/app",
+  "command": "/usr/bin/cc  -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/hal/include -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/lib/midi-parser/include -std=gnu11 -Wall -Werror -Wpedantic -Wextra -fdiagnostics-color -o CMakeFiles/tac_server.dir/src/tcp.c.o -c /home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/src/tcp.c",
+  "file": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/app/src/tcp.c",
+  "output": "app/CMakeFiles/tac_server.dir/src/tcp.c.o"
+},
+{
+  "directory": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/build/lib/midi-parser",
+  "command": "/usr/bin/cc  -I/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/lib/midi-parser/include -std=gnu11 -Wall -Werror -Wpedantic -Wextra -fdiagnostics-color -o CMakeFiles/lib.dir/src/midi-parser.c.o -c /home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/lib/midi-parser/src/midi-parser.c",
+  "file": "/home/spennydl/schoolwork/CMPT433/threes-a-chorus/server/lib/midi-parser/src/midi-parser.c",
+  "output": "lib/midi-parser/CMakeFiles/lib.dir/src/midi-parser.c.o"
+}
+]

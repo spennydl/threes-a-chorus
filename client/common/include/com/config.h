@@ -9,4 +9,4 @@
  *
  * Should be one of "fuzzyconfig.h", "flowerconfig.h", or "stickersconfig.h"
  */
-#include "fuzzyconfig.h"
+#include "stickersconfig.h"

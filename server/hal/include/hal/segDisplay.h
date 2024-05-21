@@ -21,12 +21,12 @@
 #include <string.h>
 #include <time.h>
 
-// Our server uses Zen Cape Green, so the green variables follow.
+// Our server uses Zen Cape Red, so the red variables follow.
 #define SEGDISPLAY_I2C_ADDRESS 0x20
-#define SEGDISPLAY_DIRA_REG 0x00
-#define SEGDISPLAY_DIRB_REG 0x01
-#define SEGDISPLAY_OUTA_REG 0x14
-#define SEGDISPLAY_OUTB_REG 0x15
+#define SEGDISPLAY_DIRA_REG 0x02
+#define SEGDISPLAY_DIRB_REG 0x03
+#define SEGDISPLAY_OUTA_REG 0x00
+#define SEGDISPLAY_OUTB_REG 0x01
 
 typedef enum
 {
